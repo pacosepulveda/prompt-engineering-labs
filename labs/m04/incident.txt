@@ -1,0 +1,14 @@
+Ticket: TKT-1042
+Environment: production
+Service: identity-api
+
+Users who leave the application idle for around 30 minutes receive HTTP 401
+when the client attempts to refresh the session.
+
+Support has confirmed 37 affected users.
+Users must sign in again to continue working.
+
+One engineer wrote:
+"maybe the new cache is keeping stale token metadata"
+
+No root cause has been confirmed.
