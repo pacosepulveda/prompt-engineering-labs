@@ -1,1 +1,2 @@
-jsonschema>=4.23,<5\n
+jsonschema>=4.23,<5
+tiktoken>=0.9,<1
