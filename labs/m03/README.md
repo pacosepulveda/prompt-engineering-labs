@@ -39,6 +39,21 @@ Antes de ejecuciones independientes:
 /chat new
 ```
 
+
+### Si no utilizas Kiro
+
+Kiro CLI es el entorno de referencia utilizado en las instrucciones del curso, pero **no es obligatorio para completar este laboratorio**.
+
+Puedes utilizar otra herramienta equivalente, por ejemplo GitHub Copilot, Claude/Claude Code, ChatGPT/Codex u otro asistente LLM que te permita trabajar con los mismos prompts y archivos.
+
+Cuando aparezca una instrucción específica de Kiro:
+
+- `/chat new` significa iniciar una conversación o contexto nuevo;
+- `@archivo` significa proporcionar ese archivo como contexto mediante el mecanismo equivalente de tu herramienta;
+- si la herramienta no puede crear archivos directamente, puedes copiar su salida al archivo indicado.
+
+Mantén constantes los inputs, reglas y criterios de evaluación. **Se evalúa el procedimiento y la evidencia obtenida, no la herramienta utilizada.**
+
 ---
 
 # 1. Escenario
