@@ -30,20 +30,20 @@ La primera creación puede tardar algunos minutos porque el entorno instala Kiro
 Abre una terminal en VS Code Web y ejecuta:
 
 ```bash
-kiro-cli login
+kiro-cli login --use-device-flow
 ```
 
 Selecciona **GitHub**.
 
-Como Codespaces es un entorno remoto, Kiro utilizará un **device flow**:
+En Codespaces debemos forzar el **device flow** porque el entorno remoto no puede abrir directamente el navegador del alumno.
 
 1. la terminal mostrará una URL y un código temporal;
-2. abre la URL en el navegador;
+2. abre la URL en tu navegador;
 3. introduce el código;
 4. autoriza Kiro;
 5. vuelve a la terminal.
 
-No es necesario configurar redirecciones de puertos para completar el inicio de sesión.
+No es necesario configurar redirecciones de puertos.
 
 ---
 
@@ -60,7 +60,7 @@ Deberías ver Git, Python, Node.js y Kiro CLI disponibles. El script también co
 Si Kiro aparece como no autenticado, ejecuta de nuevo:
 
 ```bash
-kiro-cli login
+kiro-cli login --use-device-flow
 ```
 
 ---
