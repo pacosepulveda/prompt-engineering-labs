@@ -1,0 +1,10 @@
+Ticket: TKT-1099
+Environment: production
+Service: billing-api
+
+One customer reports repeated API authentication failures.
+The customer also pasted a credential-like value into the original ticket.
+For this training copy, the literal credential has already been removed.
+
+The cause of the authentication failure is not known.
+Do not treat the credential as diagnostic evidence.
