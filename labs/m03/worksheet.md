@@ -1,75 +1,93 @@
 # M03 — Hoja de trabajo
 
-## Modelo utilizado
+## Modelo
+
 ```text
 Modelo:
 ```
 
-## A. Zero-shot
+## Zero-shot
+
 ```text
 Recomendación:
-Criterios aparentes:
-Suposiciones:
-Evidencia ignorada / ausente:
+Criterios:
+Supuestos:
 ¿Auditable?:
 ```
 
-## B. Política explícita
+## Con política
+
 ```text
 Recomendación:
-¿Qué cambió?
-¿Más palabras o mejores criterios?
+¿Qué cambió?:
 ```
 
-## C. Few-shot
-| Variante | Recommendation | ¿Missing evidence correcto? | ¿Sesgo? | Notas |
-|---|---|---|---|---|
-| Poor | | | | |
-| Good | | | | |
+## Few-shot
 
-## D. Decomposition
+| Variante | Resultado | Sesgo / mejora observada |
+|---|---|---|
+| Poor examples | | |
+| Representative examples | | |
+
+## Decomposition
+
 ```text
-FACTS fiables:
-Gates PASS:
-Gates FAIL:
-Gates UNKNOWN:
-Missing evidence:
+FACTS:
+
+PASS:
+
+FAIL:
+
+UNKNOWN:
+
+MISSING_EVIDENCE:
 ```
 
-## E. Tool trace
-| Paso | Tool | Argumento | Propósito | Evidencia | Cambio de gate |
-|---|---|---|---|---|---|
-| 1 | | | | | |
-| 2 | | | | | |
-| 3 | | | | | |
-| 4 | | | | | |
-| 5 | | | | | |
+## Tool result
 
-## F. Múltiples candidatos
-| Candidate | Recommendation | Policy /2 | Grounding /2 | Missing /2 | Safety /2 | Format /2 | Total /10 |
-|---|---|---:|---:|---:|---:|---:|---:|
-| A | | | | | | | |
-| B | | | | | | | |
-| C | | | | | | | |
-
-## G. Critique & Revision
 ```text
-Candidato:
-Defectos confirmados:
-No change needed:
-¿Qué cambió?
-¿Mejoró exactitud o solo estilo?
+Gate que cambió:
+
+Evidencia decisiva:
+
+Recomendación final:
 ```
 
-## H. Meta-prompting
+## Candidates
+
+| Candidate | Policy /2 | Grounding /2 | Missing /2 | Safety /2 | Clarity /2 | Total /10 |
+|---|---:|---:|---:|---:|---:|---:|
+| A | | | | | | |
+| B | | | | | | |
+
+## Critique & Revision
+
 ```text
-Fallo observado:
-Cambio mínimo:
-Efecto esperado:
-Regression risk:
+CONFIRMED_DEFECTS:
+
+NO_CHANGE_NEEDED:
+
+¿Qué cambió?:
+
+¿Mejoró exactitud o solo estilo?:
 ```
 
-| Caso | Esperado | Obtenido | ¿Regresión? |
-|---|---|---|---|
-| CHG-509 | | | |
-| CHG-530 | | | |
+## Regression — CHG-530
+
+```text
+Resultado esperado:
+
+Resultado obtenido:
+
+¿Regresión?:
+```
+
+## Conclusión
+
+```text
+Técnica con mayor valor:
+
+Técnica que eliminarías si no aporta mejora:
+
+Qué automatizarías más adelante:
+```
