@@ -1,86 +1,73 @@
 # M04 — Hoja de trabajo
 
-## Modelo utilizado
+## Modelo
 
 ```text
 Modelo:
 ```
 
-# A. "Devuelve JSON"
+## JSON libre
 
 ```text
-¿JSON sintácticamente válido?
-¿Añadió Markdown?
-¿Campos estables?
-¿Tipos estables?
-¿Inventó información?
-¿Qué contrato existía realmente?
+¿JSON válido?:
+¿Campos estables?:
+¿Tipos estables?:
+¿Información inventada?:
+¿Existe un contrato verificable?:
 ```
 
-# B. Validación V1
+## Validación
 
-| Capa | Resultado | Error observado |
+| Capa | Resultado | Qué comprueba |
 |---|---|---|
 | Syntax | | |
 | Schema | | |
 | Semantic | | |
 
-# C. Tipos de fallo
-
-| Archivo | Syntax | Schema | Semantic | Causa |
-|---|---|---|---|---|
-| invalid-syntax.json | | | | |
-| invalid-schema.json | | | | |
-| invalid-semantic.json | | | | |
-
-# D. Repair loop
+## Demo de errores
 
 ```text
-Error inicial:
+¿Qué evitaría JSON Mode?:
+
+¿Qué evitaría Structured Outputs?:
+
+¿Qué seguiría necesitando validación semántica?:
+```
+
+## Repair loop
+
+```text
+Error detectado:
+
 Cambio realizado:
+
 Resultado del retry:
-¿Cambió algo no relacionado con el error?
 ```
 
-# E. Casos adicionales
-
-| Caso | Schema valid | Semantic valid | Sensitive data handled | Acción |
-|---|---|---|---|---|
-| TKT-1057 | | | | |
-| TKT-1099 | | | | |
-
-# F. Formatos
+## Tool call
 
 ```text
-¿Cuándo usarías LLM para transformar formato?
-¿Cuándo usarías un serializer determinista?
-```
+Tool:
 
-# G. Tool call
-
-```text
-Tool propuesta:
 Argumentos:
-¿Pasó schema?
-¿Pasó allowlist?
+
+¿Validada por runtime?:
+
 TOOL_RESULT:
 ```
 
-# H. Responsabilidades
+## Conclusión
 
 ```text
-PROMPT es responsable de:
-JSON SCHEMA es responsable de:
-VALIDADOR SEMÁNTICO es responsable de:
-RUNTIME es responsable de:
-TOOL es responsable de:
-```
+JSON válido ≠
 
-# Conclusión
+Schema válido ≠
 
-```text
-¿Qué diferencia hay entre JSON válido y output válido?
-¿Qué problema resuelve validator → repair → retry?
-¿Por qué una tool call no debe ejecutarse automáticamente?
-¿Qué guardarías en el repositorio como artefacto reutilizable?
+Una tool call propuesta ≠
+
+Responsabilidad del prompt:
+
+Responsabilidad del schema:
+
+Responsabilidad del runtime:
 ```
