@@ -1,70 +1,28 @@
-# M03 — Laboratorio: Técnicas avanzadas para una revisión de readiness
+# M03 — Laboratorio: Elegir la técnica adecuada
 
-## Curso de Prompt Engineering Avanzado
+## Objetivo
 
-**Modalidad:** práctica guiada en clase  
-**Entorno recomendado:** GitHub Codespaces + Kiro CLI  
-**Programación obligatoria:** no  
-**Caso:** revisión de readiness de un cambio de software con evidencias incompletas
+En esta práctica vas a comparar varias técnicas avanzadas sobre **el mismo problema**.
 
----
+La regla será:
 
-## 1. Objetivo
+> **No añadir complejidad si no resuelve un fallo observable.**
 
-En M02 trabajamos el prompt como una especificación evaluable.
-
-En M03 vamos a responder una pregunta distinta:
-
-> **¿Qué técnica merece la pena añadir cuando un prompt simple ya no es suficiente?**
-
-No utilizaremos técnicas avanzadas porque “suenen mejor”. Cada técnica debe resolver un fallo observado.
-
-Durante el laboratorio compararemos:
-
-1. **zero-shot**;
-2. **few-shot**;
-3. **decomposition**;
-4. **tool-aware prompting** mediante un tool loop manual;
-5. **múltiples candidatos**;
-6. **critique & revision**;
-7. **meta-prompting** apoyado en resultados observados.
-
----
-
-## 2. Qué NO vamos a hacer
-
-En este laboratorio:
-
-- no pediremos cadenas privadas de razonamiento;
-- no utilizaremos “piensa paso a paso” como requisito;
-- no crearemos todavía agentes personalizados;
-- no configuraremos MCP;
-- no construiremos RAG;
-- no automatizaremos el workflow con código.
-
-Cuando necesitemos justificar una respuesta pediremos hechos, criterios, evidencia, datos ausentes y conclusión.
-
----
-
-## 3. Escenario
-
-Formas parte de un equipo que revisa cambios antes de desplegarlos a producción.
-
-El cambio principal es **CHG-482**, relacionado con la renovación de tokens de una aplicación SaaS.
-
-La IA **no autoriza el despliegue**. Produce una recomendación para revisión humana:
+Trabajaremos con:
 
 ```text
-READY
-BLOCKED
-NEEDS_EVIDENCE
+zero-shot
+→ few-shot
+→ decomposition
+→ tool result
+→ candidatos
+→ critique & revision
+→ regression check
 ```
-
-La recomendación debe basarse únicamente en la política, la información del cambio y las evidencias obtenidas mediante las herramientas permitidas.
 
 ---
 
-## 4. Preparar el entorno
+## Entorno
 
 ```bash
 cd /workspaces/prompt-engineering-labs
@@ -73,315 +31,357 @@ git pull
 kiro-cli
 ```
 
-Comprueba el modelo con:
+Mantén el mismo modelo durante las comparaciones.
 
-```text
-/model
-```
-
-Mantén el mismo modelo durante cada comparación y utiliza:
+Antes de ejecuciones independientes:
 
 ```text
 /chat new
 ```
 
-antes de ejecuciones independientes.
+---
+
+# 1. Escenario
+
+Debes revisar si un cambio puede considerarse listo para producción.
+
+Los cambios están en:
+
+```text
+labs/m03/change.md
+```
+
+El resultado permitido es:
+
+```text
+READY
+BLOCKED
+NEEDS_EVIDENCE
+```
+
+La IA prepara una recomendación para revisión humana. No autoriza el despliegue.
 
 ---
 
-# Parte A — Zero-shot
+# 2. Política
+
+Utiliza esta política durante la práctica.
+
+## Gates obligatorios
+
+### Tests
+
+```text
+PASS  → no hay tests release-blocking fallidos
+FAIL  → existe al menos uno
+UNKNOWN → no hay resultado detallado
+```
+
+### Known issues
+
+```text
+PASS  → no hay Sev1/Sev2 abiertos relacionados
+FAIL  → existe al menos uno
+UNKNOWN → falta evidencia
+```
+
+### Rollback
+
+`PASS` si:
+
+- existe plan;
+- rehearsal correcto;
+- realizado hace 30 días o menos.
+
+### Monitoring
+
+`PASS` si existen:
+
+- dashboard;
+- alertas activas;
+- owner.
+
+### Security review
+
+Es obligatorio si el cambio afecta a:
+
+- autenticación;
+- autorización;
+- secretos;
+- lifecycle de tokens.
+
+## Regla de decisión
+
+```text
+si existe algún FAIL
+→ BLOCKED
+
+si no existe FAIL pero hay algún UNKNOWN obligatorio
+→ NEEDS_EVIDENCE
+
+si todos los gates obligatorios son PASS
+→ READY
+```
+
+---
+
+# 3. Zero-shot
 
 En una conversación nueva:
 
 ```text
-Revisa @labs/m03/cases/CHG-482.md y dime si está listo para producción.
+Revisa CHG-482 de @labs/m03/change.md y dime si está listo para producción.
 ```
 
-Registra en `labs/m03/worksheet.md`:
+Anota:
 
 - recomendación;
-- criterios aparentes;
+- criterio utilizado;
 - supuestos;
-- evidencia ignorada o ausente;
-- auditabilidad.
+- si la decisión es auditable.
+
+Ahora repite incluyendo la política anterior.
+
+Pregunta:
+
+> ¿La mejora procede de una técnica sofisticada o simplemente de haber definido qué significa “ready”?
 
 ---
 
-# Parte B — Política explícita
+# 4. Few-shot
 
-Lee:
+## Ejemplos pobres
+
+Utiliza estos ejemplos:
 
 ```text
-labs/m03/context/release-policy.md
+Ejemplo 1:
+Tests PASS, rollback PASS, monitoring PASS → READY
+
+Ejemplo 2:
+Tests PASS, rollback PASS, monitoring PASS → READY
+
+Ejemplo 3:
+Tests PASS, rollback PASS, monitoring PASS → READY
 ```
+
+Pide después la revisión de `CHG-482`.
+
+Observa si la colección introduce un sesgo accidental.
+
+## Ejemplos representativos
+
+Sustituye los anteriores por:
+
+```text
+Ejemplo A:
+Todos los gates obligatorios PASS → READY
+
+Ejemplo B:
+Un test release-blocking FAIL → BLOCKED
+
+Ejemplo C:
+Cambio de autenticación sin resultado de security review → NEEDS_EVIDENCE
+
+Ejemplo D:
+Rollback rehearsal de hace 31 días → BLOCKED
+```
+
+Repite la revisión.
+
+Pregunta:
+
+> ¿Qué puede enseñar few-shot y qué información no puede inventar?
+
+---
+
+# 5. Decomposition
 
 En una conversación nueva:
 
 ```text
-Aplica @labs/m03/context/release-policy.md a
-@labs/m03/cases/CHG-482.md.
+Analiza CHG-482 de @labs/m03/change.md utilizando la política.
 
-Devuelve:
-RECOMMENDATION:
-GATES:
-MISSING_EVIDENCE:
-NEXT_STEP:
-
-No inventes evidencias.
-```
-
-Compara con zero-shot.
-
----
-
-# Parte C — Few-shot
-
-Primero utiliza:
-
-```text
-labs/m03/examples/few-shot-poor.md
-```
-
-Después repite con:
-
-```text
-labs/m03/examples/few-shot-good.md
-```
-
-Prompt recomendado:
-
-```text
-La política aplicable es @labs/m03/context/release-policy.md.
-
-Usa como ejemplos de comportamiento:
-@labs/m03/examples/few-shot-good.md
-
-Ahora revisa:
-@labs/m03/cases/CHG-482.md
-
-Devuelve:
-RECOMMENDATION:
-GATES:
-MISSING_EVIDENCE:
-NEXT_STEP:
-```
-
-Evalúa si los ejemplos mejoran interpretación, missing data, consistencia y respeto a reglas.
-
----
-
-# Parte D — Decomposition
-
-En una conversación nueva:
-
-```text
-Usa:
-- política: @labs/m03/context/release-policy.md
-- cambio: @labs/m03/cases/CHG-482.md
-
-No emitas todavía una recomendación final.
-
-FASE 1 — FACTS
-Extrae únicamente hechos explícitos del cambio.
-No completes campos ausentes.
-
-FASE 2 — GATE ASSESSMENT
-Para cada gate de la política indica:
-PASS | FAIL | UNKNOWN
-y cita la evidencia utilizada.
-
-FASE 3 — MISSING EVIDENCE
-Enumera únicamente la evidencia necesaria para convertir los UNKNOWN
-relevantes en PASS o FAIL.
-
-Devuelve solo esas tres fases.
-```
-
----
-
-# Parte E — Tool-aware prompting
-
-En M03 haremos un tool loop manual y auditable:
-
-```text
-TOOL_REQUEST
-     ↓
-runtime / humano ejecuta
-     ↓
-TOOL_RESULT
-     ↓
-modelo decide si necesita otra evidencia
-     ↓
-FINAL
-```
-
-Consulta el catálogo:
-
-```bash
-python labs/m03/tools/release_tool.py list-tools
-```
-
-En Kiro:
-
-```text
-Tienes que revisar CHG-482.
-
-Política:
-@labs/m03/context/release-policy.md
-
-Información inicial:
-@labs/m03/cases/CHG-482.md
-
-Catálogo de herramientas:
-@labs/m03/context/tool-catalog.md
-
-REGLAS:
-- No inventes resultados de herramientas.
-- Si falta evidencia necesaria, devuelve únicamente un TOOL_REQUEST.
-- Solicita una sola herramienta cada vez.
-- Espera a recibir TOOL_RESULT antes de continuar.
-- Cuando exista evidencia suficiente, devuelve FINAL.
-- No expongas razonamiento privado.
-
-Formato de petición:
-
-TOOL_REQUEST:
-tool: <nombre>
-change_id: <id>
-purpose: <qué evidencia verificable necesitas>
-
-Formato final:
-
-FINAL:
-RECOMMENDATION:
-GATES:
-EVIDENCE:
-MISSING_EVIDENCE:
-NEXT_STEP:
-```
-
-Ejecuta cada herramienta solicitada en una segunda terminal:
-
-```bash
-python labs/m03/tools/release_tool.py test-summary CHG-482
-```
-
-Pega la salida precedida por:
-
-```text
-TOOL_RESULT:
-```
-
-Registra el trace en `worksheet.md`.
-
----
-
-# Parte F — Múltiples candidatos
-
-Conserva la evidencia obtenida y genera tres revisiones independientes en tres conversaciones nuevas.
-
-Utiliza exactamente la misma política, cambio, tool results y modelo.
-
-Después evalúa A, B y C con:
-
-```text
-labs/m03/context/review-rubric.md
-```
-
-No selecciones por estilo o longitud.
-
----
-
-# Parte G — Critique & Revision
-
-Escoge el candidato con mejor puntuación verificable.
-
-Pide primero crítica sin reescritura:
-
-```text
-Actúa como revisor.
-
-No reescribas todavía la respuesta.
-
-Evalúa el candidato únicamente contra:
-@labs/m03/context/review-rubric.md
+No emitas todavía recomendación final.
 
 Devuelve solo:
 
-CONFIRMED_DEFECTS:
-- defecto
-  criterion:
-  evidence:
+FACTS:
+- hechos explícitos
 
-NO_CHANGE_NEEDED:
-- elementos que ya cumplen
+GATES:
+- gate: PASS | FAIL | UNKNOWN
+  evidence: ...
 
-No inventes defectos para justificar una revisión.
+MISSING_EVIDENCE:
+- evidencia necesaria para resolver UNKNOWN relevantes
 ```
 
-Después:
+Compara con el prompt monolítico.
+
+La pregunta no es solo:
+
+> ¿respondió mejor?
+
+También:
+
+> ¿es ahora más fácil localizar por qué falla?
+
+---
+
+# 6. Obtener evidencia externa
+
+El cambio hace referencia a sistemas externos.
+
+Ejecuta:
+
+```bash
+python labs/m03/tool.py CHG-482
+```
+
+El script devuelve evidencia read-only simulada.
+
+Copia el resultado y entrégaselo al modelo:
 
 ```text
-Corrige únicamente los defectos de CONFIRMED_DEFECTS.
+TOOL_RESULT:
+[PEGA AQUÍ LA SALIDA]
 
-Conserva todo lo que aparece en NO_CHANGE_NEEDED.
+Reevalúa los gates aplicando exactamente la política.
 
 Devuelve:
 RECOMMENDATION:
 GATES:
 EVIDENCE:
-RISKS:
+NEXT_STEP:
+```
+
+Anota:
+
+- qué gate cambió;
+- si la recomendación cambió;
+- qué evidencia concreta provocó el cambio.
+
+---
+
+# 7. Dos candidatos independientes
+
+Crea dos conversaciones nuevas.
+
+En ambas utiliza exactamente:
+
+- la misma política;
+- `CHG-482`;
+- el mismo `TOOL_RESULT`;
+- el mismo modelo.
+
+Genera:
+
+```text
+Candidate A
+Candidate B
+```
+
+con:
+
+```text
+RECOMMENDATION:
+GATES:
+EVIDENCE:
 NEXT_STEP:
 ```
 
 ---
 
-# Parte H — Meta-prompting
+# 8. Critique con rúbrica
 
-No pidas simplemente “hazme un prompt mejor”.
+Evalúa ambos candidatos con esta rúbrica:
 
-Utiliza fallos observados:
+| Criterio | 0 | 1 | 2 |
+|---|---|---|---|
+| Policy accuracy | incorrecto | error menor | correcto |
+| Grounding | inventa | soporte parcial | todo verificable |
+| Missing data | incorrecto | menor omisión | correcto |
+| Action safety | fuera de alcance | vaga | segura y concreta |
+| Clarity | difícil de auditar | suficiente | claramente auditable |
 
-```text
-Prompt/procedimiento actual:
-[PEGA LA VERSIÓN UTILIZADA]
-
-Fallos observados:
-[PEGA SOLO FALLOS REALES]
-
-Criterios:
-@labs/m03/context/review-rubric.md
-
-Propón el CAMBIO MÍNIMO al prompt que corrija esos fallos.
-
-No añadas reglas que no respondan a un fallo observado.
-
-Devuelve:
-CHANGE:
-RATIONALE:
-EXPECTED_EFFECT:
-REGRESSION_RISK:
-```
-
-Comprueba regresiones con:
+Pide al modelo:
 
 ```text
-labs/m03/cases/CHG-509.md
-labs/m03/cases/CHG-530.md
+Evalúa Candidate A y Candidate B con la rúbrica.
+
+No generes una nueva respuesta.
+
+Devuelve para cada candidato:
+SCORE:
+CONFIRMED_DEFECTS:
+NO_CHANGE_NEEDED:
 ```
+
+No elijas por estilo o longitud.
 
 ---
 
-## Resultado de aprendizaje
+# 9. Critique & Revision
 
-Al finalizar debes poder explicar qué problema resuelve cada técnica y por qué:
+Escoge el candidato con mejor resultado verificable.
 
-- zero-shot es el baseline;
-- few-shot enseña comportamiento, no hechos;
-- decomposition mejora trazabilidad;
-- tool calls + results producen evidencia observable;
-- consenso no equivale a verdad;
-- critique necesita criterios;
-- meta-prompting necesita evals.
+Pide:
 
-No hay entrega fuera de clase.
+```text
+Corrige únicamente los defectos confirmados.
+
+Conserva lo que ya cumple.
+
+Devuelve:
+RECOMMENDATION:
+GATES:
+EVIDENCE:
+NEXT_STEP:
+```
+
+Compara antes y después.
+
+Pregunta:
+
+> ¿la revisión mejora exactitud o solo hace la respuesta más convincente?
+
+---
+
+# 10. Regression check
+
+En el mismo archivo:
+
+```text
+labs/m03/change.md
+```
+
+encontrarás `CHG-530`.
+
+Utiliza el procedimiento final que has construido.
+
+Comprueba si:
+
+- aplica correctamente la política;
+- distingue `UNKNOWN` de `FAIL`;
+- evita convertirse en un sistema que responde siempre `BLOCKED`.
+
+---
+
+# 11. Conclusión
+
+Completa:
+
+```text
+labs/m03/worksheet.md
+```
+
+Debes poder explicar:
+
+- cuándo zero-shot era suficiente;
+- qué aportó few-shot;
+- qué aportó decomposition;
+- qué cambió al introducir evidencia externa;
+- por qué dos candidatos coincidentes no demuestran verdad;
+- por qué critique necesita una rúbrica;
+- qué técnica eliminarías si no aportara mejora medible.
