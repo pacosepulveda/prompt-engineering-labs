@@ -13,10 +13,10 @@ La ruta soportada durante el curso es **GitHub Codespaces**. No es necesario ins
 5. Ejecuta:
 
 ```bash
-kiro-cli login
+kiro-cli login --use-device-flow
 ```
 
-6. Elige **GitHub** como método de autenticación y completa el device flow en el navegador.
+6. Elige **GitHub** como método de autenticación, abre la URL que muestre la terminal e introduce el código temporal.
 7. Comprueba el entorno:
 
 ```bash
