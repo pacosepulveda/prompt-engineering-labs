@@ -35,6 +35,25 @@ git pull
 kiro-cli
 ```
 
+
+### Si no utilizas Kiro
+
+Kiro es el entorno de referencia porque este laboratorio utiliza un custom agent de proyecto, pero puedes trabajar con otra plataforma que ofrezca capacidades equivalentes.
+
+La alternativa debe permitir representar, de una forma u otra:
+
+- instrucciones persistentes del agente;
+- contexto o recursos de proyecto;
+- una superficie de tools restringida;
+- límites de autoridad;
+- conversaciones o ejecuciones independientes.
+
+El archivo `.kiro/agents/release-reviewer.json` es específico de Kiro. Si utilizas otra herramienta, **traduce su intención y restricciones al mecanismo equivalente** de esa plataforma en lugar de intentar utilizar el JSON literalmente.
+
+Sustituye `/agent` y `/chat new` por los mecanismos equivalentes.
+
+**Se evalúa el diseño del agente y su comportamiento reproducible, no el formato de configuración de Kiro.**
+
 Los archivos del laboratorio son:
 
 ```text
