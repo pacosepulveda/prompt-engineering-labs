@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ToolCall",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "tool",
+    "arguments",
+    "purpose"
+  ],
+  "properties": {
+    "tool": {
+      "type": "string",
+      "enum": [
+        "get_service_owner",
+        "get_runbook"
+      ]
+    },
+    "arguments": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "service"
+      ],
+      "properties": {
+        "service": {
+          "type": "string",
+          "enum": [
+            "identity-api",
+            "billing-api",
+            "web-portal"
+          ]
+        }
+      }
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 240
+    }
+  }
+}
