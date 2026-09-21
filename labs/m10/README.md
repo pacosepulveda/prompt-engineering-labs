@@ -46,6 +46,24 @@ git pull
 ./scripts/check-environment.sh
 ```
 
+
+### Si no utilizas Kiro
+
+Kiro CLI es el coding agent de referencia, pero **puedes realizar el capstone con otro asistente o coding agent**.
+
+La alternativa debe poder, directamente o con tu intervención:
+
+- leer los archivos del repositorio;
+- proponer o aplicar cambios de código;
+- ejecutar los comandos de verificación;
+- mostrar o permitir revisar el diff.
+
+`AGENTS.md` contiene las instrucciones persistentes de este laboratorio. Si tu herramienta no lo consume automáticamente, inclúyelo explícitamente como contexto antes de delegar el cambio.
+
+Sustituye `/chat new` por una nueva conversación o sesión equivalente.
+
+Los mismos quality gates y el mismo `git diff` se aplican independientemente de la herramienta. **Se evalúa la evidencia de ingeniería y la revisión humana, no el coding agent utilizado.**
+
 Los archivos del laboratorio son:
 
 ```text
