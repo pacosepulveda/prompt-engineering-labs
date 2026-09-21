@@ -1,0 +1,9 @@
+Ticket: TKT-1120
+Environment: production
+Service: web-portal
+
+After today's frontend deployment, some users receive old static assets until they perform a hard refresh.
+
+The report is sufficiently detailed to route it to the team responsible for web-portal. The ticket does not contain the owner or the applicable runbook.
+No security indicator is reported.
+Affected users: 12.
