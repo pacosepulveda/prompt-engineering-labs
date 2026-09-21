@@ -28,6 +28,6 @@ printf 'Node:    '; node --version || true
 printf 'Kiro:    '; kiro-cli --version || true
 
 printf '\nEntorno preparado. Para comenzar:\n'
-printf '  1. kiro-cli login\n'
+printf '  1. kiro-cli login --use-device-flow\n'
 printf '  2. ./scripts/check-environment.sh\n'
 printf '  3. kiro-cli\n\n'
