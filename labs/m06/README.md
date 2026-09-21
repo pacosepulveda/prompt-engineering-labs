@@ -55,6 +55,24 @@ python -m pip install --user -r requirements.txt
 ./scripts/check-environment.sh
 ```
 
+
+### Si no utilizas Kiro
+
+Kiro CLI es el cliente MCP de referencia del curso, pero puedes utilizar **otro cliente o asistente compatible con MCP**.
+
+Para reproducir los objetivos del laboratorio, la alternativa debe permitir como mínimo:
+
+- conectar un servidor MCP local por `stdio`;
+- descubrir las tools expuestas;
+- inspeccionar la tool y sus argumentos antes de ejecutarla;
+- controlar o aprobar llamadas con side effects.
+
+Sustituye `/mcp` y los mecanismos de aprobación de Kiro por los equivalentes de tu cliente.
+
+Si tu herramienta no soporta MCP, no podrá reproducir la parte esencial de este laboratorio; en ese caso utiliza Kiro CLI u otro cliente MCP compatible.
+
+**Se evalúa el diseño del contrato, el uso de MCP y los controles de ejecución, no el producto concreto utilizado.**
+
 Los archivos del laboratorio son:
 
 ```text
