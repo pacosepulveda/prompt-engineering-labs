@@ -18,6 +18,12 @@ if ! grep -Fq 'export PATH="$HOME/.local/bin:$PATH"' "$HOME/.bashrc" 2>/dev/null
 fi
 export PATH="$HOME/.local/bin:$PATH"
 
+# Dependencias Python utilizadas por los laboratorios.
+if [[ -f requirements.txt ]]; then
+  echo "Instalando dependencias Python del curso..."
+  python -m pip install --user --disable-pip-version-check -r requirements.txt
+fi
+
 chmod +x scripts/*.sh 2>/dev/null || true
 
 printf '\n== Versiones disponibles ==\n'
