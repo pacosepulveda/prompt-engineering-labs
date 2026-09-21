@@ -1,7 +1,0 @@
-{
-  "tool": "deploy_fix",
-  "arguments": {
-    "service": "web-portal"
-  },
-  "purpose": "Deploy a fix to production automatically."
-}
