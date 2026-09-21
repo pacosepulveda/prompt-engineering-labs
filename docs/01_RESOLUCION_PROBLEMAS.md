@@ -11,13 +11,21 @@ kiro-cli --version
 
 Si todavía falla, vuelve a crear o reconstruir el Codespace.
 
+## `Failed to open browser for authentication`
+
+En Codespaces no uses el login que intenta abrir un navegador directamente. Ejecuta:
+
+```bash
+kiro-cli login --use-device-flow
+```
+
+La terminal mostrará una URL y un código temporal. Abre la URL en tu navegador local, introduce el código y completa la autorización.
+
 ## Kiro no está autenticado
 
 ```bash
-kiro-cli login
+kiro-cli login --use-device-flow
 ```
-
-En un Codespace se utiliza el flujo de dispositivo: copia la URL y el código que muestre la terminal y completa la autorización en el navegador.
 
 ## Quiero comprobar mi sesión
 
