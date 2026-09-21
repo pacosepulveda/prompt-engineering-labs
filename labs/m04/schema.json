@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Incident",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "incident_id",
+    "service",
+    "environment",
+    "category",
+    "severity",
+    "affected_users",
+    "summary",
+    "evidence",
+    "suspected_cause",
+    "recommended_action"
+  ],
+  "properties": {
+    "incident_id": {
+      "type": "string",
+      "pattern": "^TKT-[0-9]{4}$"
+    },
+    "service": {
+      "type": "string",
+      "enum": [
+        "identity-api",
+        "billing-api",
+        "web-portal"
+      ]
+    },
+    "environment": {
+      "type": "string",
+      "enum": [
+        "production",
+        "staging",
+        "development"
+      ]
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "authentication",
+        "availability",
+        "performance",
+        "other"
+      ]
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "P1",
+        "P2",
+        "P3",
+        "P4",
+        "UNDETERMINED"
+      ]
+    },
+    "affected_users": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 300
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 5,
+      "items": {
+        "type": "string",
+        "minLength": 3
+      }
+    },
+    "suspected_cause": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 200
+    },
+    "recommended_action": {
+      "type": "string",
+      "enum": [
+        "open_bug",
+        "request_more_info"
+      ]
+    }
+  }
+}
