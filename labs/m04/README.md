@@ -1,471 +1,360 @@
-# M04 — Laboratorio: De texto libre a contratos verificables y tool calls controladas
+# M04 — Laboratorio: Contratos verificables y tool calls controladas
 
-## Curso de Prompt Engineering Avanzado
+## Objetivo
 
-**Modalidad:** práctica guiada en clase  
-**Entorno recomendado:** GitHub Codespaces + Kiro CLI  
-**Programación obligatoria:** no  
-**Caso:** normalización y enrutado de incidencias de producto
+En esta práctica vas a transformar una incidencia escrita en lenguaje natural en un objeto que pueda consumir software.
 
----
-
-# 1. Objetivo
-
-En este laboratorio vamos a pasar de una respuesta pensada para humanos a una salida que pueda consumir software.
-
-Trabajaremos con este flujo:
+Trabajaremos con una única cadena:
 
 ```text
-Texto libre
-    ↓
-Prompt estructurado
-    ↓
-JSON
-    ↓
-Validación
-    ↓
-Reparación si falla
-    ↓
-Dato fiable
-    ↓
-Tool call propuesta por el modelo
-    ↓
-Runtime valida y ejecuta
+incidencia
+  ↓
+JSON libre
+  ↓
+JSON Schema
+  ↓
+validación
+  ↓
+repair
+  ↓
+objeto válido
+  ↓
+tool call
+  ↓
+runtime valida
+  ↓
+ejecución controlada
 ```
 
-La idea principal es:
+La idea central es:
 
-> **El modelo propone. El runtime controla. La herramienta ejecuta.**
-
----
-
-# 2. Qué vas a practicar
-
-- output contracts;
-- JSON y JSON Schema;
-- diferencia entre JSON válido y datos válidos;
-- validación sintáctica;
-- validación de esquema;
-- validación semántica;
-- recuperación `validator → repair → retry`;
-- formatos deterministas a partir de datos ya validados;
-- tool calling mediante contratos explícitos;
-- separación entre decisión del modelo y ejecución del runtime;
-- creación de un prompt reutilizable como artefacto.
+> **Pedir JSON no crea un contrato. Y una tool call propuesta por un modelo no equivale a permiso para ejecutarla.**
 
 ---
 
-# 3. Escenario
-
-Un equipo de soporte recibe incidencias en texto libre.
-
-Queremos normalizarlas a una estructura común antes de:
-
-- abrir bugs;
-- solicitar más información;
-- escalar un posible incidente de seguridad;
-- enrutar la incidencia al owner de un servicio.
-
-Los datos son sintéticos.
-
-La IA no debe ejecutar acciones directamente.
-
----
-
-# 4. Preparar el entorno
-
-Desde el Codespace:
+## Entorno
 
 ```bash
 cd /workspaces/prompt-engineering-labs
 git pull
-./scripts/check-environment.sh
+python -m pip install --user -r requirements.txt
 kiro-cli
 ```
 
-Mantén el mismo modelo durante las comparaciones.
-
-Antes de ejecuciones independientes:
+Los archivos del laboratorio son:
 
 ```text
-/chat new
+labs/m04/
+├── README.md
+├── incident.txt
+├── schema.json
+├── validate.py
+└── worksheet.md
+```
+
+Los archivos que tú generes puedes guardarlos en:
+
+```text
+labs/m04/work/
 ```
 
 ---
 
-# Parte A — Pedir JSON no es tener un contrato
-
-## 5. Primer intento
-
-Abre:
-
-```text
-labs/m04/cases/TKT-1042.txt
-```
+# 1. Primer intento: “devuelve JSON”
 
 En una conversación nueva:
 
 ```text
-Analiza @labs/m04/cases/TKT-1042.txt y devuelve la información como JSON.
+Analiza @labs/m04/incident.txt y devuelve la información como JSON.
 ```
 
-Observa nombres de campos, tipos, valores inventados, campos ausentes, estabilidad del formato y si añade Markdown alrededor del JSON.
+Observa:
 
-Registra tus observaciones en:
+- nombres de campos;
+- tipos;
+- valores inventados;
+- campos ausentes;
+- si añade texto o Markdown;
+- si el mismo prompt produciría una estructura fiable para una aplicación.
 
-```text
-labs/m04/worksheet.md
-```
+Anota tus observaciones.
 
 ---
 
-# Parte B — Definir el contrato
-
-## 6. Examina el JSON Schema
+# 2. El contrato
 
 Abre:
 
 ```text
-labs/m04/contracts/incident.schema.json
+labs/m04/schema.json
 ```
 
-El schema define campos obligatorios, tipos, enumeraciones, valores permitidos y restricciones estructurales.
+El schema define la estructura requerida.
 
-También abre:
+Además, aplica estas reglas semánticas:
 
 ```text
-labs/m04/context/normalization-policy.md
+1. No inventar una causa.
+2. suspected_cause = null salvo causa explícitamente confirmada.
+3. P2 cuando:
+   - environment = production
+   - affected_users >= 25
+   - existe impacto funcional confirmado
+4. P3 para impacto funcional limitado que no alcanza P2.
+5. evidence solo puede contener hechos del ticket.
+6. recommended_action debe ser open_bug para este caso si la extracción es correcta.
 ```
-
-El schema define **estructura**. La política define reglas **semánticas**.
 
 ---
 
-## 7. Crea un prompt de extracción V1
+# 3. Crear un prompt estructurado
 
 Crea:
 
 ```text
-labs/m04/work/incident-extractor-v1.md
+labs/m04/work/prompt.md
 ```
 
-Utiliza esta estructura:
+Debe incluir:
 
-```markdown
-# TASK
-# SOURCE OF TRUTH
-# INPUT
-# POPULATION RULES
-# OUTPUT CONTRACT
-# SUCCESS CRITERIA
+```text
+TASK
+SOURCE OF TRUTH
+INPUT
+RESTRICTIONS
+OUTPUT CONTRACT
+SUCCESS CRITERIA
 ```
 
-Debe indicar como mínimo:
+Incluye explícitamente:
 
-- que solo puede utilizar información presente en la entrada;
-- que no puede inventar una causa;
-- cómo representar datos ausentes;
-- que debe respetar los valores permitidos;
-- que debe devolver **solo JSON**;
-- que los posibles secretos no deben reproducirse literalmente;
-- que la política semántica también debe respetarse.
-
-No copies manualmente la respuesta esperada del caso.
+- usar solo información del ticket;
+- no inventar causa;
+- devolver solo JSON;
+- cumplir `schema.json`;
+- respetar las reglas semánticas;
+- no añadir comentarios ni Markdown.
 
 ---
 
-# Parte C — Generar y validar
+# 4. Generar output.json
 
-## 8. Genera incident-v1.json
+Pide a Kiro:
+
+```text
+Aplica @labs/m04/work/prompt.md.
+
+Contrato:
+@labs/m04/schema.json
+
+Entrada:
+@labs/m04/incident.txt
+
+Crea únicamente:
+labs/m04/work/output.json
+```
+
+---
+
+# 5. Validar
+
+Ejecuta:
+
+```bash
+python labs/m04/validate.py labs/m04/work/output.json
+```
+
+El validador comprueba:
+
+```text
+1. JSON syntax
+2. JSON Schema
+3. semantic rules
+```
+
+Un resultado correcto termina con:
+
+```text
+SYNTAX_VALID
+SCHEMA_VALID
+SEMANTIC_VALID
+```
+
+---
+
+# 6. Ver los tres tipos de fallo sin crear más archivos
+
+Ejecuta:
+
+```bash
+python labs/m04/validate.py --demo
+```
+
+El script muestra tres ejemplos incorporados:
+
+```text
+SYNTAX ERROR
+SCHEMA ERROR
+SEMANTIC ERROR
+```
+
+Responde:
+
+> ¿Qué parte podría evitar JSON Mode?  
+> ¿Qué parte podría evitar Structured Outputs?  
+> ¿Qué parte sigue necesitando validación de negocio?
+
+---
+
+# 7. Validator → Repair → Retry
+
+Si tu `output.json` falla, copia únicamente los errores del validador.
 
 En una conversación nueva:
 
 ```text
-Aplica exactamente @labs/m04/work/incident-extractor-v1.md.
-
-Contrato estructural:
-@labs/m04/contracts/incident.schema.json
-
-Política semántica:
-@labs/m04/context/normalization-policy.md
-
-Entrada:
-@labs/m04/cases/TKT-1042.txt
-
-Crea el archivo:
-labs/m04/work/incident-v1.json
-
-No modifiques ningún otro archivo.
-```
-
----
-
-## 9. Validación de esquema
-
-```bash
-python labs/m04/tools/validate_incident.py   labs/m04/work/incident-v1.json   --schema-only
-```
-
-Puedes obtener `SCHEMA_VALID` o errores de schema.
-
-Un JSON puede ser sintácticamente válido y aun así violar el contrato.
-
----
-
-## 10. Validación completa
-
-```bash
-python labs/m04/tools/validate_incident.py   labs/m04/work/incident-v1.json
-```
-
-Esta comprobación añade reglas semánticas.
-
----
-
-# Parte D — Syntax vs Schema vs Semantics
-
-## 11. Casos preparados
-
-```bash
-python labs/m04/tools/validate_incident.py labs/m04/samples/invalid-syntax.json
-python labs/m04/tools/validate_incident.py labs/m04/samples/invalid-schema.json
-python labs/m04/tools/validate_incident.py labs/m04/samples/invalid-semantic.json
-```
-
-Clasifica cada fallo como:
-
-```text
-SYNTAX
-SCHEMA
-SEMANTIC
-```
-
-Pregunta:
-
-> ¿Podría un “JSON mode” resolver los tres tipos de error?
-
----
-
-# Parte E — Validator → Repair → Retry
-
-## 12. Reparar utilizando errores verificables
-
-Si `incident-v1.json` falla, copia únicamente los errores del validador.
-
-En Kiro:
-
-```text
-/chat new
-```
-
-y utiliza:
-
-```text
 Archivo actual:
-@labs/m04/work/incident-v1.json
+@labs/m04/work/output.json
 
 Contrato:
-@labs/m04/contracts/incident.schema.json
+@labs/m04/schema.json
 
-Política:
-@labs/m04/context/normalization-policy.md
-
-Errores del validador:
+Errores:
 [PEGA LOS ERRORES]
 
 Corrige únicamente los defectos que explican esos errores.
 No inventes información nueva.
 
-Escribe el resultado en:
-labs/m04/work/incident-v2.json
+Sobrescribe:
+labs/m04/work/output.json
 ```
 
-Valida otra vez hasta obtener:
+Valida otra vez:
 
-```text
-SCHEMA_VALID
-SEMANTIC_VALID
+```bash
+python labs/m04/validate.py labs/m04/work/output.json
 ```
 
-Si V1 ya era válida, practica el ciclo con `invalid-schema.json` o `invalid-semantic.json`.
+Si tu primera salida ya era válida, utiliza uno de los errores mostrados por `--demo` para discutir qué capa lo detectaría. No necesitas romper tu propio archivo.
 
 ---
 
-# Parte F — Probar el contrato con otros casos
+# 8. Tool call como output estructurado
 
-## 13. Casos adicionales
-
-Usa el mismo prompt con:
+El objeto validado contiene:
 
 ```text
-labs/m04/cases/TKT-1057.txt
-labs/m04/cases/TKT-1099.txt
+service = identity-api
 ```
 
-Guarda:
+Ahora necesitas el owner del servicio.
 
-```text
-labs/m04/work/TKT-1057.json
-labs/m04/work/TKT-1099.json
-```
+No pidas al modelo que lo invente.
 
-Valida ambos.
-
-En `TKT-1099`, el modelo debe poder indicar:
+Utiliza este contrato:
 
 ```json
-"contains_sensitive_data": true
+{
+  "tool": "get_service_owner",
+  "arguments": {
+    "service": "identity-api"
+  }
+}
 ```
 
-sin copiar el secreto literal.
-
----
-
-# Parte G — Formatos deterministas
-
-## 14. Renderizado
-
-Una vez validado un JSON:
-
-```bash
-python labs/m04/tools/render_incident.py   labs/m04/work/incident-v2.json
-```
-
-El script genera YAML, CSV y Markdown a partir de la misma representación canónica.
-
-Compara:
+Crea:
 
 ```text
-LLM → YAML
-LLM → CSV
-LLM → Markdown
-```
-
-con:
-
-```text
-JSON validado
-→ serializer
-→ YAML / CSV / Markdown
-```
-
----
-
-# Parte H — Tool calling como contrato
-
-## 15. Nuevo caso
-
-Abre:
-
-```text
-labs/m04/cases/TKT-1120.txt
-labs/m04/contracts/tool-call.schema.json
-labs/m04/context/tool-catalog.md
-```
-
-El modelo no conoce el owner del servicio. Debe solicitar una herramienta.
-
----
-
-## 16. Proponer una tool call
-
-```text
-Normaliza primero mentalmente la incidencia, pero no muestres razonamiento privado.
-
-Entrada:
-@labs/m04/cases/TKT-1120.txt
-
-Política:
-@labs/m04/context/normalization-policy.md
-
-Catálogo:
-@labs/m04/context/tool-catalog.md
-
-Contrato de tool call:
-@labs/m04/contracts/tool-call.schema.json
-
-Necesitas obtener la información necesaria para enrutar el ticket.
-
-Crea únicamente:
 labs/m04/work/tool-call.json
+```
 
-No ejecutes herramientas.
+con este prompt:
+
+```text
+Necesito obtener el owner del servicio de la incidencia.
+
+Incidencia validada:
+@labs/m04/work/output.json
+
+Genera únicamente una tool call JSON.
+
+Herramienta permitida:
+get_service_owner
+
+Argumentos permitidos:
+service = identity-api | billing-api | web-portal
+
+No ejecutes la herramienta.
+No añadas otros campos.
 ```
 
 ---
 
-## 17. El runtime controla
+# 9. El runtime decide si puede ejecutarse
+
+Ejecuta:
 
 ```bash
-python labs/m04/tools/execute_tool.py   labs/m04/work/tool-call.json
+python labs/m04/validate.py \
+  labs/m04/work/tool-call.json \
+  --tool-call \
+  --execute
 ```
 
-El runtime parsea JSON, valida schema, verifica allowlist, valida argumentos y ejecuta una herramienta local read-only.
+El script:
 
-Si es válido, verás:
+```text
+parsea
+→ valida estructura
+→ comprueba allowlist
+→ valida argumentos
+→ ejecuta una función local read-only
+```
+
+Si todo es correcto verás:
 
 ```text
 TOOL_CALL_VALID
+TOOL_RESULT:
+...
 ```
-
-seguido de `TOOL_RESULT`.
 
 ---
 
-## 18. Tool call inválida
+# 10. Comprueba el control del runtime
+
+Edita temporalmente `tool-call.json` y cambia:
+
+```json
+"tool": "get_service_owner"
+```
+
+por:
+
+```json
+"tool": "deploy_fix"
+```
+
+Vuelve a ejecutar:
 
 ```bash
-python labs/m04/tools/execute_tool.py   labs/m04/samples/invalid-tool-call.json
+python labs/m04/validate.py \
+  labs/m04/work/tool-call.json \
+  --tool-call \
+  --execute
 ```
 
-Pregunta:
+El runtime debe rechazarlo.
 
-> Si el modelo propone una llamada, ¿significa que debemos ejecutarla?
+Después restaura la tool call válida.
+
+La pregunta clave es:
+
+> ¿Por qué el hecho de que un LLM proponga una acción no significa que el sistema deba permitirla?
 
 ---
 
-# Parte I — Utilizar el resultado
-
-## 19. Crear una acción final
-
-Copia el `TOOL_RESULT`.
-
-```text
-Incidencia:
-@labs/m04/cases/TKT-1120.txt
-
-Resultado de herramienta:
-[PEGA TOOL_RESULT]
-
-Genera únicamente:
-
-ACTION:
-OWNER:
-RUNBOOK:
-RATIONALE:
-
-No inventes valores que no aparezcan en la incidencia o en TOOL_RESULT.
-```
-
----
-
-# Parte J — Prompt como artefacto reutilizable
-
-## 20. Crea una plantilla
-
-Guarda una versión final:
-
-```text
-labs/m04/work/incident-extractor-template.md
-```
-
-Debe contener propósito, fuente de verdad, placeholder de entrada, reglas de población, referencia al contrato y criterios de éxito.
-
-No incluyas información específica de un ticket concreto.
-
----
-
-# 21. Hoja de trabajo
+# 11. Conclusión
 
 Completa:
 
@@ -475,28 +364,12 @@ labs/m04/worksheet.md
 
 Debes poder explicar:
 
-- diferencia entre sintaxis, schema y semántica;
-- por qué JSON válido no implica output correcto;
-- qué aporta validator→repair→retry;
-- cuándo serializar con código;
-- por qué una tool call no debe ejecutarse directamente;
-- qué responsabilidad pertenece al prompt, schema y runtime.
-
----
-
-# Reto opcional — SQL como artefacto
-
-Abre:
-
 ```text
-labs/m04/challenges/sql-request.md
+JSON válido ≠ schema válido
+schema válido ≠ semántica correcta
+tool call propuesta ≠ ejecución autorizada
 ```
 
-Genera una consulta SQL parametrizada, sin ejecutarla.
+Y también:
 
-Evalúa:
-
-- consulta y parámetros separados;
-- ausencia de concatenación de datos no confiables;
-- uso exclusivo de tablas/columnas permitidas;
-- output limitado al artefacto solicitado.
+> ¿qué responsabilidad pertenece al prompt, cuál al schema y cuál al runtime?
