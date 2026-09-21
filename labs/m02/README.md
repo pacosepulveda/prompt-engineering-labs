@@ -1,77 +1,32 @@
 # M02 — Laboratorio: Del prompt ambiguo a una especificación evaluable
 
-## Curso de Prompt Engineering Avanzado
+## Objetivo
 
-**Modalidad:** práctica guiada en clase  
-**Entorno recomendado:** GitHub Codespaces + Kiro CLI  
-**Programación obligatoria:** no  
-**Caso:** triaje de incidencias de red con datos sintéticos
+En esta práctica vas a trabajar con un prompt como si fuera un componente de ingeniería:
 
----
+```text
+baseline
+  ↓
+prompt V1
+  ↓
+prueba con varios casos
+  ↓
+detección de un fallo
+  ↓
+cambio controlado
+  ↓
+prompt V2
+  ↓
+regression test
+```
 
-## 1. Objetivo
-
-En esta práctica no vamos a buscar un “prompt perfecto”.
-
-Vamos a trabajar como lo haríamos con cualquier otro componente de ingeniería:
-
-1. crear un **baseline**;
-2. definir qué significa una respuesta correcta;
-3. construir una petición con requisitos explícitos;
-4. probarla con varios casos;
-5. identificar un fallo;
-6. cambiar **una sola cosa**;
-7. volver a ejecutar el mismo test set para comprobar si hemos mejorado sin introducir regresiones.
-
-Al terminar deberías poder explicar por qué una petición profesional necesita algo más que una buena redacción.
+No buscamos un “prompt perfecto”. Buscamos un comportamiento que puedas explicar y evaluar.
 
 ---
 
-## 2. Qué vas a practicar
+## Entorno
 
-Durante el laboratorio trabajarás con los seis elementos vistos en el módulo:
-
-1. **Tarea**
-2. **Contexto**
-3. **Entrada**
-4. **Restricciones**
-5. **Output contract**
-6. **Criterios de éxito**
-
-También practicarás:
-
-- grounding sobre información suministrada;
-- separación entre hechos e hipótesis;
-- control de formato;
-- abstención cuando faltan datos;
-- test sets;
-- comparación controlada;
-- detección de regresiones.
-
-> En este laboratorio **no utilizaremos todavía agentes personalizados, MCP, skills ni steering**. Los veremos en módulos posteriores. Aquí queremos aislar el problema de diseño y evaluación de instrucciones.
-
----
-
-## 3. Escenario
-
-Trabajas con un equipo de **Network Operations**.
-
-Quieres utilizar un LLM para realizar un primer triaje de incidencias antes de que un ingeniero revise el caso.
-
-El sistema **no debe decidir cambios de red ni ejecutar acciones**. Solo debe:
-
-- clasificar la severidad;
-- mostrar las evidencias que justifican esa clasificación;
-- indicar qué información falta;
-- recomendar una siguiente comprobación **reversible y diagnóstica**.
-
-Los datos del ejercicio son completamente sintéticos.
-
----
-
-## 4. Preparar el entorno
-
-Desde el Codespace del curso:
+Desde el Codespace:
 
 ```bash
 cd /workspaces/prompt-engineering-labs
@@ -80,86 +35,84 @@ git pull
 kiro-cli
 ```
 
-El entorno debe indicar que Kiro está autenticado.
+Mantén el mismo modelo durante toda la comparación.
 
-### Mantén constante el modelo
-
-Dentro de Kiro CLI puedes consultar o cambiar el modelo con:
-
-```text
-/model
-```
-
-Puedes utilizar cualquiera de los modelos disponibles en tu cuenta, pero:
-
-> **No cambies de modelo durante el laboratorio.**
-
-Si cambias simultáneamente prompt y modelo ya no podrás saber qué provocó la diferencia observada.
-
-### Empieza cada ejecución en una conversación nueva
-
-Antes de probar cada caso:
+Antes de cada prueba independiente:
 
 ```text
 /chat new
 ```
 
-Esto evita que respuestas o instrucciones anteriores contaminen la siguiente prueba.
+---
+
+# 1. Escenario
+
+Trabajas con un equipo de **Network Operations**.
+
+Quieres utilizar un LLM para realizar un primer triaje de incidencias.
+
+El modelo debe:
+
+- asignar severidad;
+- justificarla con hechos del caso;
+- indicar información relevante ausente;
+- proponer una comprobación diagnóstica y reversible.
+
+El modelo no debe:
+
+- inventar causas;
+- tratar hipótesis como hechos;
+- recomendar cambios de red;
+- completar datos ausentes mediante suposiciones.
+
+La política está en:
+
+```text
+labs/m02/policy.md
+```
+
+Los tres casos están en:
+
+```text
+labs/m02/cases.md
+```
 
 ---
 
-# Parte A — Crear un baseline
+# 2. Baseline
 
-## 5. Primera ejecución
+Utiliza únicamente el caso `INC-117`.
 
-Comienza con la incidencia:
-
-```text
-labs/m02/cases/INC-117.md
-```
-
-En una conversación nueva escribe únicamente:
+En una conversación nueva:
 
 ```text
-Analiza @labs/m02/cases/INC-117.md y dime qué harías.
+Analiza el caso INC-117 de @labs/m02/cases.md y dime qué harías.
 ```
 
-No añadas explicaciones adicionales.
+No añadas la política todavía.
 
-### Observa la respuesta
+En `labs/m02/worksheet.md` anota:
 
-Anota en tu hoja de trabajo:
+- qué severidad asigna;
+- qué criterio parece utilizar;
+- si inventa alguna causa;
+- si distingue hechos de hipótesis;
+- si la siguiente acción es reversible;
+- si el formato sería reutilizable.
 
-- ¿ha asignado una severidad?
-- ¿con qué criterio?
-- ¿ha inventado alguna causa?
-- ¿ha distinguido hechos de hipótesis?
-- ¿la siguiente acción es reversible?
-- ¿el formato sería suficientemente estable para que otra persona lo utilizase de forma repetible?
+La pregunta es:
 
-No intentes corregirlo todavía.
-
-El objetivo de esta fase es obtener un **baseline**.
+> ¿Puede el modelo saber qué significa “correcto” si todavía no le hemos dado la política?
 
 ---
 
-# Parte B — Diseñar la versión V1
+# 3. Crear prompt V1
 
-## 6. Lee la política de triaje
-
-Abre:
+Lee:
 
 ```text
-labs/m02/context/triage-policy.md
+labs/m02/policy.md
 ```
-
-Esta política será la fuente de verdad del ejercicio.
-
-El modelo no debe utilizar una clasificación de severidad inventada ni conocimiento externo cuando contradiga esta política.
-
----
-
-## 7. Crea tu prompt
 
 Crea:
 
@@ -167,44 +120,16 @@ Crea:
 labs/m02/work/prompt-v1.md
 ```
 
-Puedes utilizar este esqueleto:
+Tu prompt debe incluir explícitamente:
 
-```markdown
-# TAREA
+1. **Tarea**
+2. **Contexto**
+3. **Entrada**
+4. **Restricciones**
+5. **Output contract**
+6. **Criterios de éxito**
 
-# CONTEXTO
-
-# ENTRADA
-
-# RESTRICCIONES
-
-# OUTPUT CONTRACT
-
-# CRITERIOS DE ÉXITO
-```
-
-Tu prompt debe dejar suficientemente claro:
-
-- qué debe hacer el modelo;
-- quién consumirá el resultado;
-- que existe una política que debe aplicar;
-- que la incidencia será suministrada como entrada;
-- qué afirmaciones están permitidas y cuáles no;
-- qué debe hacer si faltan datos;
-- qué formato debe devolver;
-- cómo podemos decidir si el resultado es correcto.
-
-### Importante
-
-No codifiques manualmente las respuestas de cada incidencia dentro del prompt.
-
-Queremos diseñar una regla reutilizable, no resolver el test set mediante excepciones.
-
----
-
-## 8. Formato mínimo esperado
-
-El resultado debe contener exactamente estas cuatro secciones, en este orden:
+El output debe contener exactamente:
 
 ```text
 SEVERITY:
@@ -213,71 +138,73 @@ MISSING_DATA:
 NEXT_CHECK:
 ```
 
-### Reglas mínimas
+Reglas mínimas:
 
-- `SEVERITY` solo puede ser `P1`, `P2`, `P3` o `UNDETERMINED`.
-- `EVIDENCE` debe utilizar únicamente información presente en la incidencia y en la política.
-- `MISSING_DATA` debe indicar datos relevantes ausentes. Si no falta ninguno, debe indicarlo explícitamente.
-- `NEXT_CHECK` debe contener una comprobación diagnóstica y reversible.
-- No se puede afirmar una causa raíz si `rca_status` no es `confirmed`.
-- No debe recomendar reinicios, rollbacks, cambios de configuración ni otras acciones que modifiquen el servicio.
+- `SEVERITY`: `P1`, `P2`, `P3` o `UNDETERMINED`;
+- `EVIDENCE`: solo hechos del caso y la política;
+- `MISSING_DATA`: información relevante ausente;
+- `NEXT_CHECK`: una única comprobación diagnóstica y reversible;
+- no afirmar una RCA si no está confirmada;
+- no recomendar reinicios, rollbacks ni cambios de configuración.
 
 ---
 
-# Parte C — Probar V1 sobre un test set
+# 4. Test set
 
-## 9. Casos principales
-
-Utiliza estos cuatro casos:
+Prueba el mismo `prompt-v1.md` con:
 
 ```text
-labs/m02/cases/INC-117.md
-labs/m02/cases/INC-204.md
-labs/m02/cases/INC-305.md
-labs/m02/cases/INC-411.md
+INC-117
+INC-305
+INC-613
 ```
 
 Para cada caso:
 
 1. ejecuta `/chat new`;
-2. mantén el mismo modelo;
-3. utiliza el mismo `prompt-v1.md`;
-4. cambia únicamente la incidencia.
+2. usa el mismo modelo;
+3. usa la misma política;
+4. cambia únicamente el caso.
 
 Mensaje recomendado:
 
 ```text
 Aplica exactamente @labs/m02/work/prompt-v1.md.
-La política aplicable es @labs/m02/context/triage-policy.md.
-La entrada es @labs/m02/cases/INC-117.md.
-No modifiques archivos ni ejecutes acciones. Devuelve únicamente el resultado solicitado.
+
+Política:
+@labs/m02/policy.md
+
+Analiza únicamente el caso INC-117 de:
+@labs/m02/cases.md
+
+No modifiques archivos ni ejecutes acciones.
 ```
 
-Cambia únicamente el nombre de la incidencia en las siguientes ejecuciones.
+Cambia solo el identificador del caso.
 
 ---
 
-## 10. Evalúa cada respuesta
+# 5. Evaluación
 
-Utiliza seis criterios. Cada uno vale **0 o 1 punto**.
+Puntúa cada respuesta con 0 o 1 en estos criterios:
 
 | Criterio | 1 punto si... |
 |---|---|
 | Severidad | aplica correctamente la política |
-| Grounding | las evidencias existen realmente en los datos suministrados |
-| RCA | no convierte sospechas en causa confirmada |
-| Missing data | detecta ausencias relevantes sin inventarlas |
-| Next check | propone una comprobación diagnóstica, relevante y reversible |
-| Output contract | respeta las cuatro secciones y los valores permitidos |
+| Grounding | la evidencia existe realmente |
+| RCA | no convierte hipótesis en causa confirmada |
+| Missing data | detecta ausencias relevantes |
+| Next check | es diagnóstico y reversible |
+| Output contract | respeta las cuatro secciones |
 
 Máximo:
 
 ```text
-6 puntos por incidencia
-24 puntos en el test set principal
+6 puntos por caso
+18 puntos en total
 ```
 
-Registra tus resultados en:
+Registra los resultados en:
 
 ```text
 labs/m02/worksheet.md
@@ -285,136 +212,80 @@ labs/m02/worksheet.md
 
 ---
 
-# Parte D — Stress test
+# 6. Diagnosticar antes de modificar
 
-## 11. Prueba casos menos cómodos
+Si una respuesta falla, no cambies inmediatamente el prompt.
 
-Ahora prueba la misma V1, sin modificarla todavía, con:
+Clasifica primero el problema:
 
 ```text
-labs/m02/cases/INC-512.md
-labs/m02/cases/INC-613.md
+INSTRUCTION
+CONTEXT
+CONSTRAINT
+OUTPUT_CONTRACT
+SUCCESS_CRITERIA
+MODEL_VARIANCE
 ```
 
-Estos casos contienen condiciones que suelen revelar problemas de diseño:
-
-- información de distinta fiabilidad;
-- hipótesis no confirmadas;
-- reglas que dependen de varias condiciones simultáneamente;
-- valores próximos a umbrales.
-
-Evalúalos utilizando exactamente la misma rúbrica.
+Escribe qué evidencia te hace pensar que el fallo pertenece a esa categoría.
 
 ---
 
-# Parte E — Diagnóstico
+# 7. Crear V2 con un solo cambio
 
-## 12. Clasifica el fallo
-
-Si alguna respuesta falla, no edites inmediatamente el prompt.
-
-Primero identifica la causa más probable.
-
-Utiliza una de estas categorías:
-
-### A. Instrucción
-
-El modelo no entendió claramente qué tarea debía realizar.
-
-### B. Contexto
-
-Faltaba una regla, prioridad o dato necesario para resolver la tarea.
-
-### C. Restricción
-
-El modelo realizó una inferencia o acción que debía estar prohibida.
-
-### D. Output contract
-
-La respuesta puede ser razonable para una persona, pero no cumple el formato esperado.
-
-### E. Criterio de éxito
-
-No habíamos definido de forma suficientemente observable qué significaba “correcto”.
-
-### F. Modelo / comportamiento no determinista
-
-La especificación parece suficiente, pero el modelo falla de forma puntual.
-
-> No todo fallo se arregla haciendo el prompt más largo.
-
----
-
-# Parte F — Crear V2 con un cambio controlado
-
-## 13. Duplica V1
+Duplica tu prompt:
 
 ```bash
 cp labs/m02/work/prompt-v1.md labs/m02/work/prompt-v2.md
 ```
 
-Ahora cambia **una sola cosa**.
+Modifica **una sola cosa**.
 
-Ejemplos válidos:
+Por ejemplo:
 
-- aclarar la prioridad entre dos reglas;
-- reforzar cuándo debe utilizar `UNDETERMINED`;
-- indicar cómo tratar una hipótesis no confirmada;
-- hacer más preciso el contrato de salida;
-- convertir un criterio vago en uno observable.
+- aclarar cuándo usar `UNDETERMINED`;
+- reforzar que una hipótesis no es una RCA;
+- aclarar una condición lógica `AND`;
+- precisar el formato esperado.
 
-No hagas cinco mejoras simultáneas.
-
-En tu hoja de trabajo escribe:
+Antes de probar escribe:
 
 ```text
 Hipótesis:
-Creo que el fallo se debe a ______________________.
+Creo que el fallo se debe a...
 
 Cambio:
-Voy a modificar _________________________________.
+Voy a modificar...
 
 Resultado esperado:
-Espero que mejore _______________________________
-sin empeorar ____________________________________.
+Espero que mejore... sin empeorar...
 ```
 
 ---
 
-# Parte G — Regression test
+# 8. Regression test
 
-## 14. Ejecuta exactamente los mismos casos
+Repite exactamente los tres casos con `prompt-v2.md`.
 
-Repite con `prompt-v2.md`:
+Compara:
 
 ```text
-INC-117
-INC-204
-INC-305
-INC-411
-INC-512
-INC-613
+V1 vs V2
 ```
 
-Utiliza otra vez conversaciones nuevas y el mismo modelo.
+Responde:
 
-Compara V1 y V2.
-
-Preguntas:
-
-1. ¿ha desaparecido el fallo?
-2. ¿ha mejorado la puntuación total?
-3. ¿ha empeorado algún caso que antes funcionaba?
-4. ¿el cambio ha aumentado innecesariamente el tamaño o complejidad del prompt?
-5. ¿el problema era realmente de prompting?
+- ¿desapareció el fallo?
+- ¿mejoró la puntuación total?
+- ¿apareció alguna regresión?
+- ¿el prompt se volvió innecesariamente más complejo?
+- ¿el problema debería resolverse realmente con prompting?
 
 ---
 
-# Parte H — Conclusiones
+# 9. Resultado final
 
-## 15. Entrega de la práctica
-
-Al finalizar debes tener:
+Al terminar debes tener:
 
 ```text
 labs/m02/work/prompt-v1.md
@@ -422,50 +293,6 @@ labs/m02/work/prompt-v2.md
 labs/m02/worksheet.md
 ```
 
-Debes ser capaz de explicar:
+Y debes poder justificar:
 
-- qué diferencia hay entre V1 y V2;
-- qué fallo intentabas corregir;
-- qué evidencia demuestra que la V2 es mejor o no;
-- si apareció alguna regresión;
-- qué parte del problema no resolverías simplemente añadiendo más instrucciones al prompt.
-
----
-
-# Reto opcional — Portabilidad entre herramientas
-
-Si queda tiempo y utilizas habitualmente otra herramienta como Kiro IDE, GitHub Copilot, ChatGPT o Claude:
-
-1. utiliza exactamente tu `prompt-v2.md`;
-2. utiliza exactamente uno de los casos del test set;
-3. no cambies la política;
-4. compara el resultado con Kiro CLI.
-
-No buscamos decidir qué producto es “mejor”.
-
-Busca diferencias en:
-
-- seguimiento de restricciones;
-- grounding;
-- formato;
-- abstención;
-- interpretación de criterios.
-
-La conclusión importante es:
-
-> **Un prompt no existe aislado: su comportamiento depende también del modelo, el harness, el contexto y las herramientas que lo rodean.**
-
----
-
-# Checklist final
-
-- [ ] He creado un baseline.
-- [ ] He utilizado los seis elementos de una petición efectiva.
-- [ ] He utilizado la política como fuente de verdad.
-- [ ] He probado V1 con más de un caso.
-- [ ] He utilizado conversaciones nuevas para reducir contaminación.
-- [ ] He mantenido el mismo modelo.
-- [ ] He identificado un fallo antes de modificar el prompt.
-- [ ] He cambiado una sola cosa en V2.
-- [ ] He ejecutado un regression test.
-- [ ] Puedo justificar con evidencia si V2 es mejor que V1.
+> **qué cambiaste, por qué lo cambiaste y qué evidencia demuestra si funcionó.**
