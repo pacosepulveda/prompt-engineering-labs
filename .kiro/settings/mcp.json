@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "ops-lab": {
+      "command": "python",
+      "args": [
+        "labs/m06/server.py"
+      ],
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}
