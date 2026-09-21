@@ -28,6 +28,18 @@ else
   warn 'Node.js no está disponible.'
 fi
 
+if python -c "import jsonschema" >/dev/null 2>&1; then
+  ok 'Python package: jsonschema'
+else
+  warn 'Falta jsonschema. Ejecuta: python -m pip install --user -r requirements.txt'
+fi
+
+if python -c "import yaml" >/dev/null 2>&1; then
+  ok 'Python package: PyYAML'
+else
+  warn 'Falta PyYAML. Ejecuta: python -m pip install --user -r requirements.txt'
+fi
+
 if command -v kiro-cli >/dev/null 2>&1; then
   ok "Kiro CLI: $(kiro-cli --version 2>&1 | head -n 1)"
   if kiro-cli whoami >/dev/null 2>&1; then
