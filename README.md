@@ -46,4 +46,4 @@ Si ya utilizas Kiro IDE, Kiro CLI, GitHub Copilot u otro entorno compatible, pue
 └── README.md
 ```
 
-Los laboratorios M02–M10 se incorporarán progresivamente después de revisar su diseño para adaptarlo al perfil real del grupo.
+Los laboratorios M01–M10 están organizados en este repositorio y utilizan Codespaces como entorno común de referencia. Kiro es la herramienta de referencia en varias prácticas, pero cada laboratorio indica cuándo puede sustituirse por una alternativa equivalente.
