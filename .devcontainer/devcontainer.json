@@ -1,0 +1,13 @@
+{
+  "name": "Prompt Engineering Labs",
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "files.eol": "\n"
+      }
+    }
+  }
+}
