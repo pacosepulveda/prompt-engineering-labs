@@ -1,0 +1,8 @@
+Ticket: TKT-1057
+Environment: staging
+
+Six testers report intermittent latency while navigating between account pages.
+The service name is not included in the report.
+
+There is no confirmed root cause and no indication of a security issue.
+The application remains usable.
