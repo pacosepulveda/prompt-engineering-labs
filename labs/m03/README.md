@@ -3,7 +3,6 @@
 ## Curso de Prompt Engineering Avanzado
 
 **Modalidad:** práctica guiada en clase  
-**Duración estimada:** 100–120 minutos  
 **Entorno recomendado:** GitHub Codespaces + Kiro CLI  
 **Programación obligatoria:** no  
 **Caso:** revisión de readiness de un cambio de software con evidencias incompletas
