@@ -23,6 +23,7 @@ Modelo:
 | Syntax | | |
 | Schema | | |
 | Semantic | | |
+| Grounding (manual) | | |
 
 ## Demo de errores
 
@@ -32,6 +33,8 @@ Modelo:
 ¿Qué evitaría Structured Outputs?:
 
 ¿Qué seguiría necesitando validación semántica?:
+
+¿Qué sigue necesitando grounding review?:
 ```
 
 ## Repair loop
@@ -63,11 +66,15 @@ JSON válido ≠
 
 Schema válido ≠
 
+Semántica válida ≠
+
 Una tool call propuesta ≠
 
 Responsabilidad del prompt:
 
 Responsabilidad del schema:
+
+Responsabilidad del grounding review:
 
 Responsabilidad del runtime:
 ```
