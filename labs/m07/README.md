@@ -533,7 +533,7 @@ python labs/m07/rag.py \
   --service account-api \
   --active-only \
   --strategy fixed \
-  --chunk-words 45 \
+  --chunk-words 25 \
   --top-k 4
 ```
 
