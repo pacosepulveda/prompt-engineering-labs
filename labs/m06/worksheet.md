@@ -1,145 +1,184 @@
 # M06 — Hoja de trabajo
 
-## 1. Contratos
-
-### get_service_status
+## 1. Discovery
 
 ```text
-Argumentos:
+Servidor MCP:
 
-Tipo de resultado:
+Tools descubiertas:
 
-Side effects:
+¿Cuáles son READ?:
 
-Información que verá el modelo:
-```
-
-### create_change_request
-
-```text
-Argumentos:
-
-Tipo de resultado:
-
-Side effects:
-
-Información que verá el modelo:
+¿Cuáles tienen side effects?:
 ```
 
 ---
 
-## 2. READ call
+## 2. Investigación de INC-2041
 
 ```text
-Tool:
-
-Argumentos:
-
-Resultado:
-
-¿Requirió aprobación?:
-
-¿Había side effects?:
-```
-
----
-
-## 3. Argumento inválido
-
-```text
-Solicitud:
-legacy-api
-
-¿Qué ocurrió?:
-
-¿Qué parte del contrato limitaba el valor?:
-```
-
----
-
-## 4. WRITE call
-
-```text
-Tool:
+Tools utilizadas:
 
 Service:
 
-Change type:
+Environment:
 
-Reason:
+Status:
 
-¿Aprobaste?:
+Affected users:
 
+P95:
+
+Baseline:
+
+RCA status:
+
+¿Hubo side effects?:
+```
+
+---
+
+## 3. Política
+
+```text
+Requisitos para crear change request:
+
+Requisitos para ejecutar restart:
+
+Autoridad de aprobación:
+
+¿Puede MCP aprobar el cambio?:
+```
+
+---
+
+## 4. Least privilege — READ only
+
+```text
+Tools WRITE deshabilitadas:
+
+¿Qué pidió el usuario?:
+
+¿Qué pudo hacer Kiro?:
+
+¿Qué NO pudo hacer?:
+
+¿Por qué esto es más fuerte que escribir "no ejecutes" en el prompt?:
+```
+
+---
+
+## 5. Elevación mínima
+
+```text
+Tool WRITE habilitada:
+
+Tool sensible todavía deshabilitada:
+
+Change ID creado:
+
+Estado:
+
+¿Fue ejecutado?:
+```
+
+---
+
+## 6. Verificación externa
+
+```text
+Comando utilizado:
+
+¿Aparece la change request?:
+
+Estado observado:
+```
+
+---
+
+## 7. Capability vs authorization
+
+### Intento con CR pendiente
+
+```text
 Change ID:
 
-¿Se verificó en changes.jsonl?:
+Tool disponible:
+
+Resultado:
+
+Código de denegación:
+
+¿Qué control actuó?:
 ```
 
----
-
-## 5. Least privilege
+### Intento con CR aprobado
 
 ```text
-¿Qué ocurrió al deshabilitar create_change_request?:
+Change ID:
 
-¿Qué riesgo reduce disabledTools?:
+Estado previo:
 
-¿Qué riesgo NO elimina?:
+Resultado:
+
+Service status después:
+
+P95 después:
 ```
 
 ---
 
-## 6. Auto-approval
+## 8. Auditoría
 
 ```text
-¿Auto-aprobarías get_service_status?:
+Evento de creación:
 
-Justificación:
+Evento denegado:
 
-¿Auto-aprobarías create_change_request?:
+Evento ejecutado:
 
-Justificación:
+¿Por qué es útil una auditoría fuera de la respuesta del modelo?:
 ```
 
 ---
 
-## 7. MCP vs shell
+## 9. MCP vs filesystem
 
-| Aspecto | Shell genérico | MCP específica |
+| Aspecto | fs_write / shell genérico | Tool MCP de dominio |
 |---|---|---|
-| Descubrimiento | | |
+| Intención semántica | | |
 | Schema de argumentos | | |
-| Descripción semántica | | |
-| Superficie de permisos | | |
-| Portabilidad | | |
-| Side effects | | |
+| Estado de negocio | | |
+| Validación de política | | |
+| Autorización | | |
+| Auditoría | | |
+| Superficie de privilegio | | |
 
 ---
 
-## 8. Diseño de tools
+## 10. Conclusión
 
-```text
-¿Por qué get_service_status(service) es mejor que do_action(command)?
-
-¿Qué argumentos eliminarías si no fueran necesarios?
-
-¿Dónde aplicarías autorización real en producción?
-```
-
----
-
-## 9. Conclusión
+Completa:
 
 ```text
 MCP ≠
 
-Tool call ≠
+Tool discovery ≠
 
-disabledTools ≠
+Tool visible ≠
 
-Una tool read-only puede...
+Least privilege ≠
 
-Una tool con side effects debe...
+Capability surface ≠
 
-El principio de mínimo privilegio aplicado a MCP significa...
+create request ≠
+
+fs_write ≠
+```
+
+Explica en una frase:
+
+```text
+¿Por qué una tool pequeña y de dominio puede ser más segura
+que dar acceso genérico a shell/filesystem?
 ```
