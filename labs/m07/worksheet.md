@@ -1,24 +1,46 @@
 # M07 — Hoja de trabajo
 
-## 1. Retrieval inicial
+## 1. Corpus
 
 ```text
-Consulta:
+Documentos:
 
-Top-k:
+Chunks:
 
-Primer documento recuperado:
-
-¿Contiene la evidencia necesaria?:
-
-¿Aparecen documentos irrelevantes?:
-
-¿La evidencia recuperada es suficiente?:
+Tokens estimados del corpus:
 ```
 
 ---
 
-## 2. Grounding
+## 2. Primera recuperación
+
+```text
+Consulta:
+
+Filtro service:
+
+Active only:
+
+Top-k:
+
+Context budget:
+
+Candidate documents:
+
+Candidate chunks:
+
+Retrieved chunks:
+
+Retrieved tokens:
+
+Reducción frente al corpus:
+
+Primer documento:
+```
+
+---
+
+## 3. Grounding
 
 ```text
 Claim 1:
@@ -30,127 +52,157 @@ Fuente:
 Claim 3:
 Fuente:
 
-¿Alguna cita no soporta realmente la afirmación?:
+¿Alguna cita no soporta el claim?:
 ```
 
 ---
 
-## 3. Conflicto de fuentes
+## 4. Metadata filtering
+
+| Ejecución | Candidate docs | Candidate chunks | Candidate tokens | Primer resultado |
+|---|---:|---:|---:|---|
+| Sin filtro | | | | |
+| service=account-api + ACTIVE | | | | |
 
 ```text
-Fuente vigente:
-
-Fuente superseded/histórica:
-
-Regla aplicada para resolver el conflicto:
-
-Respuesta final:
+¿Qué aporta el filtro?:
 ```
 
 ---
 
-## 4. No-answer
+## 5. Conflicto de fuentes
+
+```text
+Fuente ACTIVE:
+
+Regla actual:
+
+Fuente SUPERSEDED:
+
+Regla histórica:
+
+¿Por qué gana la fuente actual?:
+```
+
+---
+
+## 6. No-answer
 
 ```text
 Pregunta:
 
-¿Existe la respuesta explícita en el contexto recuperado?:
+Documento principal recuperado:
 
-¿El modelo se abstuvo?:
+¿El valor solicitado aparece?:
 
-¿Qué dato faltaba?:
+Respuesta correcta:
+
+¿Por qué una cifra plausible sería un fallo?:
 ```
 
 ---
 
-## 5. Query formulation
+## 7. Top-k
+
+| top-k | Retrieved chunks | Retrieved tokens | Evidencia | Ruido |
+|---:|---:|---:|---|---|
+| 2 | | | | |
+| 4 | | | | |
+| 8 | | | | |
+
+```text
+Top-k preferido:
+Justificación:
+```
+
+---
+
+## 8. Context budget
+
+| Max context tokens | Chunks incluidos | Tokens reales del paquete | Observaciones |
+|---:|---:|---:|---|
+| 500 | | | |
+| 1200 | | | |
+| 1600 | | | |
+
+```text
+¿Qué puede ocurrir con un presupuesto demasiado bajo?:
+
+¿Qué puede ocurrir con uno demasiado alto?:
+```
+
+---
+
+## 9. Query + metadata
 
 ```text
 Consulta genérica:
 
 Consulta específica:
 
-¿Qué cambió en el ranking?:
+Filtros:
 
-¿Qué consulta utilizarías y por qué?:
+¿Qué cambió?:
 ```
 
 ---
 
-## 6. Top-k
-
-| top-k | Evidencia necesaria | Ruido | Observaciones |
-|---:|---|---|---|
-| 1 | | | |
-| 3 | | | |
-| 5 | | | |
+## 10. Chunking
 
 ```text
-Top-k elegido:
-Justificación:
-```
+Section:
 
----
+Fixed:
 
-## 7. Chunking
+¿Alguna regla/excepción quedó separada?:
 
-```text
-Section chunks:
-
-Fixed chunks:
-
-¿Alguna regla quedó partida?:
-
-Estrategia preferida:
+Estrategia elegida:
 
 Justificación:
 ```
 
 ---
 
-## 8. Evaluación
+## 11. Evaluación
 
 ```text
-Configuración inicial:
-strategy =
-top-k =
-chunk-words =
+Strategy:
 
-Recall@k:
-```
+Top-k:
 
-```text
-Configuración alternativa:
-strategy =
-top-k =
-chunk-words =
+Context budget:
 
 Recall@k:
 
-¿Mejoró retrieval?:
+¿Qué mide?:
 
-¿Aumentó el contexto/ruido?:
+¿Qué NO mide?:
 ```
 
 ---
 
-## 9. Diagnóstico
+## 12. Diagnóstico
 
 ```text
 Ejemplo de retrieval failure:
 
-
 Ejemplo de generation failure:
+
+¿Cómo distinguirlos?:
 ```
 
 ---
 
-## 10. Conclusión
+## 13. Conclusión
 
 Completa:
 
 ```text
+RAG ≠
+
 Retrieval failure ≠
+
+Metadata filter ≠
 
 Similarity score ≠
 
@@ -158,7 +210,11 @@ Citation ≠
 
 Top-k alto ≠
 
+Más contexto ≠
+
 Documento recuperado ≠
 
 No-answer es válido cuando...
+
+Token budget sirve para...
 ```
