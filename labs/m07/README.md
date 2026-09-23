@@ -1,38 +1,44 @@
-# M07 — Laboratorio: RAG, retrieval y respuestas con evidencia
+# M07 — Laboratorio: RAG con corpus amplio, retrieval y contexto eficiente
 
 ## Objetivo
 
-En esta práctica vas a construir el flujo esencial de un sistema RAG sin depender de una base vectorial ni de servicios externos.
+En esta práctica vas a trabajar con un sistema RAG local sobre un corpus suficientemente amplio como para que **no tenga sentido enviar toda la base de conocimiento al modelo**.
 
-Trabajaremos con:
-
-```text
-pregunta
-   ↓
-retrieval
-   ↓
-chunks recuperados
-   ↓
-LLM
-   ↓
-respuesta con fuentes
-```
-
-El objetivo no es “meter documentos en el prompt”.
-
-Queremos comprobar:
+El flujo será:
 
 ```text
-¿recuperamos la evidencia correcta?
-¿podemos citarla?
-¿sabemos abstenernos si no está?
-¿qué hacemos cuando las fuentes se contradicen?
-¿cómo afectan chunking y top-k?
+corpus
+  ↓
+metadata filter
+  ↓
+chunking
+  ↓
+BM25 retrieval
+  ↓
+top-k
+  ↓
+context budget
+  ↓
+retrieved.md
+  ↓
+Kiro
+  ↓
+respuesta grounded
 ```
 
 La idea central es:
 
-> **Una respuesta RAG no puede ser mejor que la evidencia que recupera.**
+> **RAG no consiste en meter documentos en el prompt; consiste en recuperar únicamente la evidencia necesaria para cada pregunta.**
+
+En este laboratorio verás de forma cuantitativa:
+
+```text
+tokens del corpus completo
+vs.
+tokens candidatos
+vs.
+tokens realmente enviados a Kiro
+```
 
 ---
 
@@ -43,126 +49,179 @@ Desde el Codespace:
 ```bash
 cd /workspaces/prompt-engineering-labs
 git pull
+python -m pip install --user -r requirements.txt
 ./scripts/check-environment.sh
 ```
 
-
-### Si no utilizas Kiro
-
-Kiro CLI es el entorno de referencia utilizado en las instrucciones del curso, pero **no es obligatorio para completar este laboratorio**.
-
-Puedes utilizar otra herramienta equivalente, por ejemplo GitHub Copilot, Claude/Claude Code, ChatGPT/Codex u otro asistente LLM que te permita trabajar con los mismos prompts y archivos.
-
-Cuando aparezca una instrucción específica de Kiro:
-
-- `/chat new` significa iniciar una conversación o contexto nuevo;
-- `@archivo` significa proporcionar ese archivo como contexto mediante el mecanismo equivalente de tu herramienta;
-- si la herramienta no puede crear archivos directamente, puedes copiar su salida al archivo indicado.
-
-Mantén constantes los inputs, reglas y criterios de evaluación. **Se evalúa el procedimiento y la evidencia obtenida, no la herramienta utilizada.**
-
-Los archivos del laboratorio son:
+Los archivos son:
 
 ```text
 labs/m07/
 ├── README.md
-├── knowledge.md
+├── corpus.jsonl
 ├── rag.py
 └── worksheet.md
 ```
 
-El script utiliza únicamente la librería estándar de Python.
+Los resultados temporales se guardan en:
+
+```text
+labs/m07/work/
+```
 
 ---
 
-# 2. La base de conocimiento
-
-Abre:
-
-```text
-labs/m07/knowledge.md
-```
-
-Contiene documentación ficticia de operaciones:
-
-- políticas actuales;
-- runbooks;
-- documentación histórica;
-- postmortems;
-- notas de producto;
-- documentación de soporte.
-
-Cada documento incluye:
-
-```text
-DOC_ID
-AUTHORITY
-DATE
-STATUS
-```
-
-Estos metadatos serán importantes más adelante.
-
----
-
-# 3. Retrieval antes de generación
+# 2. Examinar el tamaño del corpus
 
 Ejecuta:
 
 ```bash
-python labs/m07/rag.py   --query "What should we inspect when account-api latency rises and cache hit ratio falls below 80 percent?"   --top-k 3
+python labs/m07/rag.py --stats
 ```
 
-No preguntes todavía al LLM.
-
-Observa:
+Debes observar valores equivalentes a:
 
 ```text
-rank
-score
+DOCUMENTS=133
+SECTION_CHUNKS=312
+ESTIMATED_TOKENS≈16000
+```
+
+El número de tokens es una estimación con `o200k_base`; sirve para comparar órdenes de magnitud, no para predecir exactamente la facturación o tokenización de cada modelo.
+
+Abre algunas líneas del corpus:
+
+```bash
+head -n 3 labs/m07/corpus.jsonl
+```
+
+Cada documento contiene metadata:
+
+```text
 DOC_ID
+title
+service
+doc_type
 authority
+status
 date
-chunk
+tags
+text
 ```
 
-Responde en `worksheet.md`:
+El corpus mezcla:
 
-```text
-¿El primer chunk contiene la evidencia necesaria?
+- runbooks;
+- políticas;
+- documentación histórica;
+- postmortems;
+- arquitectura;
+- capacidad;
+- SLO;
+- soporte;
+- release notes;
+- documentación compartida;
+- documentos de otros servicios.
 
-¿Aparecen documentos irrelevantes?
-
-¿La información recuperada es suficiente para contestar?
-```
-
-Este paso separa dos problemas que suelen confundirse:
-
-```text
-retrieval quality
-≠
-generation quality
-```
+Hay ruido deliberado.
 
 ---
 
-# 4. Crear una respuesta grounded
+# 3. Primera recuperación: no pasar todo el corpus
 
-Genera un archivo de contexto recuperado:
+Ejecuta:
 
 ```bash
 mkdir -p labs/m07/work
 
-python labs/m07/rag.py   --query "What should we inspect when account-api latency rises and cache hit ratio falls below 80 percent?"   --top-k 3   --out labs/m07/work/retrieved.md
+python labs/m07/rag.py \
+  --query "What should we inspect when account-api latency rises and cache hit ratio falls below 80 percent?" \
+  --service account-api \
+  --active-only \
+  --top-k 4 \
+  --max-context-tokens 1200 \
+  --out labs/m07/work/retrieved.md
 ```
 
-Inicia Kiro:
+Observa el bloque:
+
+```text
+=== CONTEXT REPORT ===
+```
+
+Deberías ver aproximadamente:
+
+```text
+CORPUS_DOCUMENTS=133
+CORPUS_CHUNKS=312
+CORPUS_ESTIMATED_TOKENS≈16000
+
+CANDIDATE_DOCUMENTS≈28
+CANDIDATE_CHUNKS≈71
+
+RETRIEVED_CHUNKS=4
+RETRIEVED_ESTIMATED_TOKENS≈500
+
+CONTEXT_REDUCTION_VS_CORPUS≈97%
+```
+
+No memorices las cifras exactas: pueden variar ligeramente si cambia el corpus o el tokenizer.
+
+La idea es observar esta reducción:
+
+```text
+CORPUS COMPLETO
+~16000 tokens
+      ↓
+METADATA FILTER
+~4000 tokens candidatos
+      ↓
+RETRIEVAL + TOP-K + BUDGET
+~500 tokens
+      ↓
+KIRO
+```
+
+---
+
+# 4. Inspeccionar exactamente qué recibirá Kiro
+
+Abre:
+
+```bash
+cat labs/m07/work/retrieved.md
+```
+
+Debe contener únicamente los chunks seleccionados.
+
+No contiene los 133 documentos.
+
+Comprueba que aparece:
+
+```text
+DOC-RUNBOOK-014
+```
+
+con la evidencia sobre:
+
+- cache eviction rate;
+- key churn;
+- backend fetch latency;
+- recent cache policy changes;
+- comparación con baseline;
+- cache hit ratio como señal, no causa confirmada.
+
+---
+
+# 5. Generación grounded
+
+Inicia:
 
 ```bash
 kiro-cli
 ```
 
-y utiliza:
+Nueva conversación:
 
 ```text
 /chat new
@@ -175,71 +234,123 @@ Answer the question using ONLY:
 @labs/m07/work/retrieved.md
 
 Question:
-What should we inspect when account-api latency rises and cache hit ratio falls below 80 percent?
+What should we inspect when account-api latency rises
+and cache hit ratio falls below 80 percent?
 
 Rules:
 - Use only retrieved evidence.
 - Cite supporting documents using [DOC_ID].
-- Do not cite a source that does not support the statement.
-- If the evidence is insufficient, say INSUFFICIENT_EVIDENCE.
+- Do not use information from the repository outside retrieved.md.
 - Do not infer a root cause from a diagnostic signal.
+- If the retrieved evidence is insufficient, say INSUFFICIENT_EVIDENCE.
 
 Return:
 ANSWER:
 SOURCES:
 ```
 
-Comprueba que las citas corresponden realmente a los chunks recuperados.
+La parte importante no es que Kiro conozca el tema.
+
+La parte importante es:
+
+```text
+Kiro recibe ~500 tokens relevantes
+en lugar de ~16000 tokens de corpus
+```
 
 ---
 
-# 5. Una respuesta con cita incorrecta sigue siendo incorrecta
+# 6. Verificar grounding
 
-No basta con que el modelo produzca:
+Para cada afirmación importante:
 
 ```text
-[DOC-123]
+claim
+→ DOC_ID
+→ chunk recuperado
 ```
 
-La cita debe cumplir:
+Una cita no es evidencia por sí sola.
+
+Debe cumplirse:
 
 ```text
-la fuente existe
+documento existe
 +
-fue recuperada
+fue recuperado
 +
-contiene evidencia para esa afirmación
+el chunk soporta el claim
 ```
 
-Revisa cada afirmación importante de la respuesta.
-
-Anota:
-
-```text
-Claim 1 → fuente
-Claim 2 → fuente
-Claim 3 → fuente
-```
-
-Si no puedes hacer esa correspondencia, la respuesta no está realmente grounded.
+Registra tres pares claim → fuente en `worksheet.md`.
 
 ---
 
-# 6. Fuentes contradictorias
+# 7. Metadata filtering también forma parte del retrieval
 
-Ahora ejecuta:
+Ejecuta la misma consulta sin filtro:
 
 ```bash
-python labs/m07/rag.py   --query "What is the current rollback rehearsal requirement for account-api production changes?"   --top-k 4   --out labs/m07/work/retrieved.md
+python labs/m07/rag.py \
+  --query "What should we inspect when account-api latency rises and cache hit ratio falls below 80 percent?" \
+  --top-k 4 \
+  --max-context-tokens 1200
 ```
 
-Abre:
+Después con:
+
+```bash
+python labs/m07/rag.py \
+  --query "What should we inspect when account-api latency rises and cache hit ratio falls below 80 percent?" \
+  --service account-api \
+  --active-only \
+  --top-k 4 \
+  --max-context-tokens 1200
+```
+
+Compara:
 
 ```text
-labs/m07/work/retrieved.md
+CANDIDATE_DOCUMENTS
+CANDIDATE_CHUNKS
+CANDIDATE_ESTIMATED_TOKENS
+ranking
 ```
 
-Deberías encontrar documentación que no dice exactamente lo mismo.
+Un filtro no genera la respuesta.
+
+Reduce el espacio de búsqueda antes del ranking.
+
+---
+
+# 8. Fuentes contradictorias
+
+Genera contexto sin `--active-only`:
+
+```bash
+python labs/m07/rag.py \
+  --query "What is the current rollback rehearsal requirement for account-api production changes?" \
+  --service account-api \
+  --top-k 5 \
+  --max-context-tokens 1400 \
+  --out labs/m07/work/retrieved.md
+```
+
+Deberían aparecer, entre otras:
+
+```text
+DOC-POLICY-021
+STATUS=ACTIVE
+30 days
+```
+
+y:
+
+```text
+DOC-HANDBOOK-008
+STATUS=SUPERSEDED
+90 days
+```
 
 Pregunta a Kiro:
 
@@ -247,7 +358,8 @@ Pregunta a Kiro:
 Use ONLY @labs/m07/work/retrieved.md.
 
 Question:
-What is the current rollback rehearsal requirement for account-api production changes?
+What is the current rollback rehearsal requirement
+for account-api production changes?
 
 Source precedence:
 1. ACTIVE beats SUPERSEDED.
@@ -261,30 +373,35 @@ WHY_THIS_SOURCE_WINS:
 SOURCES:
 ```
 
-### Pregunta
-
-¿Debe el sistema:
+La respuesta correcta es:
 
 ```text
-A) combinar ambas reglas
-B) elegir la fuente vigente
-C) elegir la que aparece primero
-D) elegir la que tenga mayor similarity score
+30 days
 ```
 
-Justifica tu respuesta.
+La similarity score ayuda a recuperar.
+
+No decide autoridad.
 
 ---
 
-# 7. Cuando la respuesta no existe
+# 9. Cuando la respuesta no existe
 
 Ejecuta:
 
 ```bash
-python labs/m07/rag.py   --query "What is the maximum configured database connection pool size for account-api?"   --top-k 3   --out labs/m07/work/retrieved.md
+python labs/m07/rag.py \
+  --query "What is the maximum configured database connection pool size for account-api?" \
+  --service account-api \
+  --active-only \
+  --top-k 4 \
+  --max-context-tokens 1200 \
+  --out labs/m07/work/retrieved.md
 ```
 
-Ahora:
+El documento relevante explica que ese valor no está definido en la documentación.
+
+Pregunta:
 
 ```text
 Use ONLY @labs/m07/work/retrieved.md.
@@ -292,7 +409,7 @@ Use ONLY @labs/m07/work/retrieved.md.
 Question:
 What is the maximum configured database connection pool size for account-api?
 
-If the retrieved evidence does not explicitly contain the answer, return:
+If the evidence does not explicitly contain the value, return:
 
 INSUFFICIENT_EVIDENCE
 
@@ -300,190 +417,180 @@ Do not estimate.
 Do not use general knowledge.
 ```
 
-La respuesta correcta debe depender de la evidencia, no de la capacidad general del modelo para producir una cifra plausible.
+Una cifra plausible sería un fallo.
 
 ---
 
-# 8. Query formulation también forma parte del sistema
+# 10. Top-k frente a contexto
+
+Prueba:
+
+```bash
+python labs/m07/rag.py \
+  --query "current account-api production rollback rehearsal requirement" \
+  --service account-api \
+  --top-k 2 \
+  --max-context-tokens 1400
+```
+
+y después:
+
+```bash
+python labs/m07/rag.py \
+  --query "current account-api production rollback rehearsal requirement" \
+  --service account-api \
+  --top-k 8 \
+  --max-context-tokens 1400
+```
+
+Observa:
+
+```text
+RETRIEVED_CHUNKS
+RETRIEVED_ESTIMATED_TOKENS
+ruido
+contradicciones
+cobertura
+```
+
+Más chunks no implican automáticamente mejor contexto.
+
+---
+
+# 11. Presupuesto de contexto
+
+Mantén `top-k 8` y compara:
+
+```text
+--max-context-tokens 500
+```
+
+con:
+
+```text
+--max-context-tokens 1600
+```
+
+El retriever intenta respetar el presupuesto y deja fuera chunks cuando añadirlos excedería el límite.
+
+Esto representa un problema real de RAG:
+
+> **No solo importa qué documentos son relevantes; también debemos decidir cuánto contexto merece entrar en el prompt.**
+
+---
+
+# 12. Query formulation
 
 Compara:
 
 ```bash
-python labs/m07/rag.py   --query "rollback"   --top-k 3
+python labs/m07/rag.py \
+  --query "rollback" \
+  --top-k 4 \
+  --max-context-tokens 1200
 ```
 
 con:
 
 ```bash
-python labs/m07/rag.py   --query "current account-api production rollback rehearsal requirement"   --top-k 3
+python labs/m07/rag.py \
+  --query "current account-api production rollback rehearsal requirement" \
+  --service account-api \
+  --top-k 4 \
+  --max-context-tokens 1200
 ```
 
-Observa:
-
-- ranking;
-- scores;
-- documentos recuperados.
-
-### Pregunta
-
-¿El problema está siempre en:
+Observa cómo:
 
 ```text
-documentos
+query
++
+metadata
 ```
 
-o puede estar también en:
-
-```text
-la consulta utilizada para retrieval
-```
+cambian el conjunto candidato y el ranking.
 
 ---
 
-# 9. Top-k: recall frente a ruido
+# 13. Chunking
 
-Ejecuta la misma consulta con:
-
-```bash
---top-k 1
-```
-
-y:
+Compara:
 
 ```bash
---top-k 5
+python labs/m07/rag.py \
+  --query "When may Support describe an account-api incident as an outage?" \
+  --service account-api \
+  --active-only \
+  --strategy section \
+  --top-k 4
 ```
 
-Compara.
+con:
 
-Un `top-k` mayor puede:
+```bash
+python labs/m07/rag.py \
+  --query "When may Support describe an account-api incident as an outage?" \
+  --service account-api \
+  --active-only \
+  --strategy fixed \
+  --chunk-words 45 \
+  --top-k 4
+```
+
+Pregunta:
 
 ```text
-+ aumentar probabilidad de recuperar la evidencia
-- introducir más ruido
-- aumentar contexto
-- introducir contradicciones
+¿la regla y su excepción siguen juntas?
+¿qué chunk es más fácil de citar?
+¿qué estrategia usa mejor el presupuesto?
 ```
 
-Un `top-k` menor puede:
-
-```text
-+ ser más preciso
-- perder una fuente necesaria
-```
-
-No existe un valor universal.
+No existe un chunk size universal.
 
 ---
 
-# 10. Chunking
-
-Hasta ahora hemos utilizado:
-
-```text
---strategy section
-```
-
-que conserva secciones semánticas del documento.
-
-Compara con:
-
-```bash
-python labs/m07/rag.py   --query "When may Support describe an account-api incident as an outage?"   --top-k 3   --strategy fixed   --chunk-words 55
-```
-
-y:
-
-```bash
-python labs/m07/rag.py   --query "When may Support describe an account-api incident as an outage?"   --top-k 3   --strategy section
-```
-
-Observa:
-
-- coherencia de los chunks;
-- si una regla queda partida;
-- cantidad de contexto necesario;
-- facilidad para citar.
-
-La pregunta no es:
-
-> ¿qué chunk size es siempre mejor?
-
-Sino:
-
-> ¿qué unidad de información necesita esta colección documental?
-
----
-
-# 11. Evaluar retrieval por separado
-
-El script incluye un pequeño conjunto de consultas con documento esperado.
+# 14. Evaluar retrieval por separado
 
 Ejecuta:
 
 ```bash
-python labs/m07/rag.py   --eval   --top-k 3   --strategy section
+python labs/m07/rag.py \
+  --eval \
+  --top-k 4 \
+  --strategy section \
+  --max-context-tokens 1200
 ```
 
-Obtendrás una métrica:
+La configuración de referencia debería alcanzar:
 
 ```text
-Recall@3
+Recall@4 = 1.00
 ```
 
-Esto evalúa:
+en el pequeño conjunto de evaluación incluido.
+
+Esto significa:
 
 ```text
-¿apareció una fuente relevante entre los primeros resultados?
+la fuente esperada apareció en el contexto recuperado
 ```
 
-No evalúa:
-
-- calidad de redacción;
-- exactitud completa de la respuesta;
-- fidelidad de las citas;
-- utilidad para el usuario.
-
-Por tanto, en un sistema RAG necesitamos evaluar al menos dos capas:
+No significa:
 
 ```text
-retrieval
-generation
+la respuesta final es correcta
+la cita es fiel
+el prompt es perfecto
+el sistema está listo para producción
 ```
 
 ---
 
-# 12. Un pequeño test de regresión
+# 15. ¿Es esto un RAG real?
 
-Cambia:
+Sí.
 
-```text
---top-k
---strategy
---chunk-words
-```
-
-y vuelve a ejecutar:
-
-```bash
-python labs/m07/rag.py --eval ...
-```
-
-Busca una configuración que:
-
-- mantenga buen Recall@k;
-- produzca chunks comprensibles;
-- no recupere contexto excesivo.
-
-Anota tu decisión.
-
----
-
-# 13. ¿Por qué esto sigue siendo RAG sin embeddings?
-
-Nuestro retriever utiliza ranking léxico BM25.
-
-El patrón sigue siendo:
+El patrón ejecutado es:
 
 ```text
 Retrieve
@@ -491,22 +598,41 @@ Retrieve
 → Generate
 ```
 
-En un sistema real podríamos sustituir el retriever por:
+No necesita obligatoriamente una base vectorial.
+
+Aquí utilizamos:
 
 ```text
-embeddings + vector search
-hybrid lexical + vector
-reranking
-metadata filters
+metadata filtering
++
+BM25 lexical retrieval
++
+chunking
++
+top-k
++
+context budget
 ```
 
-sin cambiar el principio fundamental:
+En una arquitectura de producción podríamos sustituir o ampliar el retriever con:
 
-> **primero recuperamos evidencia; después generamos sobre esa evidencia.**
+```text
+embeddings
+vector search
+hybrid lexical + vector
+semantic reranking
+query rewriting
+ACL filters
+multiple indexes
+```
+
+sin cambiar la idea esencial:
+
+> **el modelo recibe un contexto seleccionado, no la base de conocimiento completa.**
 
 ---
 
-# 14. Conclusión
+# 16. Conclusión
 
 Completa:
 
@@ -517,15 +643,27 @@ labs/m07/worksheet.md
 Debes poder explicar:
 
 ```text
+RAG ≠ enviar todo el corpus
+
 retrieval failure ≠ generation failure
+
+metadata filter ≠ ranking
+
 similarity score ≠ authority
+
 citation ≠ proof
+
 top-k alto ≠ mejor
-chunk pequeño ≠ mejor
+
+más contexto ≠ mejor contexto
+
 documento recuperado ≠ documento vigente
-no-answer es una salida válida
+
+no-answer = salida válida
+
+token budget = decisión de diseño
 ```
 
-Y especialmente:
+La idea final es:
 
-> **un sistema RAG fiable necesita saber cuándo tiene evidencia suficiente y cuándo no.**
+> **RAG es context engineering dinámico: recuperar, seleccionar y presupuestar la evidencia que realmente necesita cada consulta.**
