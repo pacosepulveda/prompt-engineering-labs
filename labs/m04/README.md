@@ -106,19 +106,49 @@ labs/m04/schema.json
 
 El schema define la estructura requerida.
 
-Además, aplica estas reglas semánticas:
+Además, para **TKT-1042** aplicamos estas reglas de negocio deterministas:
 
 ```text
-1. No inventar una causa.
-2. suspected_cause = null salvo causa explícitamente confirmada.
-3. P2 cuando:
+1. category = authentication
+   porque el incidente describe HTTP 401 durante el refresh de sesión.
+
+2. severity = P2
+   porque:
    - environment = production
-   - affected_users >= 25
-   - existe impacto funcional confirmado
-4. P3 para impacto funcional limitado que no alcanza P2.
-5. evidence solo puede contener hechos del ticket.
-6. recommended_action debe ser open_bug para este caso si la extracción es correcta.
+   - affected_users = 37 (>= 25)
+   - existe impacto funcional confirmado:
+     los usuarios deben volver a iniciar sesión.
+
+3. suspected_cause = null
+   porque no existe una causa raíz confirmada.
+   La frase "maybe the new cache..." es una hipótesis, no una confirmación.
+
+4. recommended_action = open_bug
+   porque el incidente está suficientemente descrito para registrar un defecto,
+   aunque la causa raíz siga sin confirmarse.
 ```
+
+Y aplicamos una capa separada de **grounding**:
+
+```text
+5. summary y evidence solo pueden afirmar hechos soportados por incident.txt.
+
+6. Una hipótesis del ticket no puede presentarse como hecho confirmado.
+```
+
+Importante:
+
+```text
+validate.py
+→ comprueba sintaxis
+→ comprueba JSON Schema
+→ comprueba las reglas de negocio deterministas 1–4
+
+grounding review
+→ compara manualmente summary/evidence con incident.txt
+```
+
+No pretendemos que un validador determinista genérico decida si cualquier frase en lenguaje natural está respaldada por el ticket.
 
 ---
 
@@ -147,7 +177,9 @@ Incluye explícitamente:
 - no inventar causa;
 - devolver solo JSON;
 - cumplir `schema.json`;
-- respetar las reglas semánticas;
+- respetar las reglas de negocio deterministas;
+- mantener summary y evidence grounded en incident.txt;
+- no convertir hipótesis en hechos;
 - no añadir comentarios ni Markdown.
 
 ---
@@ -184,7 +216,7 @@ El validador comprueba:
 ```text
 1. JSON syntax
 2. JSON Schema
-3. semantic rules
+3. deterministic business rules
 ```
 
 Un resultado correcto termina con:
@@ -193,11 +225,47 @@ Un resultado correcto termina con:
 SYNTAX_VALID
 SCHEMA_VALID
 SEMANTIC_VALID
+GROUNDING_REVIEW_REQUIRED | compare summary/evidence with incident.txt
+```
+
+La última línea es deliberada: el programa no declara automáticamente que el texto libre está grounded. Ese control se revisa aparte.
+
+---
+
+# 6. Grounding review
+
+Después de obtener `SEMANTIC_VALID`, compara manualmente:
+
+```text
+labs/m04/work/output.json
+vs.
+labs/m04/incident.txt
+```
+
+Comprueba:
+
+```text
+- summary no introduce hechos nuevos;
+- cada elemento de evidence está respaldado por el ticket;
+- "maybe the new cache..." no aparece como causa confirmada;
+- no se inventan sistemas, fechas, owners, métricas o diagnósticos.
+```
+
+Anota el resultado en `worksheet.md`.
+
+La distinción que buscamos es:
+
+```text
+schema válido
+≠
+semántica de negocio válida
+≠
+contenido grounded
 ```
 
 ---
 
-# 6. Ver los tres tipos de fallo sin crear más archivos
+# 7. Ver los tres tipos de fallo sin crear más archivos
 
 Ejecuta:
 
@@ -221,7 +289,7 @@ Responde:
 
 ---
 
-# 7. Validator → Repair → Retry
+# 8. Validator → Repair → Retry
 
 Si tu `output.json` falla, copia únicamente los errores del validador.
 
@@ -254,7 +322,7 @@ Si tu primera salida ya era válida, utiliza uno de los errores mostrados por `-
 
 ---
 
-# 8. Tool call como output estructurado
+# 9. Tool call como output estructurado
 
 El objeto validado contiene:
 
@@ -305,7 +373,7 @@ No añadas otros campos.
 
 ---
 
-# 9. El runtime decide si puede ejecutarse
+# 10. El runtime decide si puede ejecutarse
 
 Ejecuta:
 
@@ -336,7 +404,7 @@ TOOL_RESULT:
 
 ---
 
-# 10. Comprueba el control del runtime
+# 11. Comprueba el control del runtime
 
 Edita temporalmente `tool-call.json` y cambia:
 
@@ -369,7 +437,7 @@ La pregunta clave es:
 
 ---
 
-# 11. Conclusión
+# 12. Conclusión
 
 Completa:
 
@@ -382,6 +450,7 @@ Debes poder explicar:
 ```text
 JSON válido ≠ schema válido
 schema válido ≠ semántica correcta
+semántica correcta ≠ contenido grounded
 tool call propuesta ≠ ejecución autorizada
 ```
 
