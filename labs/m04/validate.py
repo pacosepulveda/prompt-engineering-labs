@@ -45,27 +45,35 @@ def print_schema_errors(errors):
         print(f"SCHEMA_ERROR at {path}: {e.message}")
 
 def semantic_errors(d):
+    """Validate deterministic business rules for the training incident.
+
+    Grounding of free-text fields such as summary/evidence is intentionally
+    reviewed separately against incident.txt.
+    """
     errors = []
 
-    if (
-        d["environment"] == "production"
-        and d["affected_users"] >= 25
-        and d["category"] in {"authentication", "availability", "performance"}
-        and d["severity"] != "P2"
-    ):
-        errors.append(
-            "production + confirmed functional impact + affected_users >= 25 requires severity=P2"
-        )
+    if d["incident_id"] == "TKT-1042":
+        if d["category"] != "authentication":
+            errors.append(
+                "TKT-1042 describes HTTP 401 during session refresh; "
+                "category must be authentication"
+            )
 
-    if d["incident_id"] == "TKT-1042" and d["suspected_cause"] is not None:
-        errors.append(
-            "TKT-1042 has no confirmed root cause; suspected_cause must be null"
-        )
+        if d["severity"] != "P2":
+            errors.append(
+                "TKT-1042 is production, affects 37 users and has confirmed "
+                "functional impact; severity must be P2"
+            )
 
-    if d["incident_id"] == "TKT-1042" and d["recommended_action"] != "open_bug":
-        errors.append(
-            "TKT-1042 is sufficiently described for recommended_action=open_bug"
-        )
+        if d["suspected_cause"] is not None:
+            errors.append(
+                "TKT-1042 has no confirmed root cause; suspected_cause must be null"
+            )
+
+        if d["recommended_action"] != "open_bug":
+            errors.append(
+                "TKT-1042 is sufficiently described for recommended_action=open_bug"
+            )
 
     return errors
 
@@ -92,6 +100,9 @@ def validate_incident(path):
         return 4
 
     print("SEMANTIC_VALID")
+    print(
+        "GROUNDING_REVIEW_REQUIRED | compare summary/evidence with incident.txt"
+    )
     return 0
 
 def validate_tool_call(path, execute=False):
