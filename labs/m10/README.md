@@ -1,4 +1,6 @@
-# M10 — Laboratorio Capstone: De la intención al cambio verificado
+# M10.2 — Laboratorio Capstone: De la intención al cambio verificado
+
+> Antes de este capstone realiza **M10.1 — Vibe Coding disciplinado** en [`../m10-vibe/README.md`](../m10-vibe/README.md).
 
 ## Objetivo
 
