@@ -86,6 +86,23 @@ def init_db(force: bool = False) -> None:
                 FOREIGN KEY(service) REFERENCES services(service)
             );
 
+            CREATE TABLE IF NOT EXISTS policies (
+                policy_id TEXT PRIMARY KEY,
+                service TEXT NOT NULL,
+                environment TEXT NOT NULL,
+                action TEXT NOT NULL,
+                version TEXT NOT NULL,
+                status TEXT NOT NULL,
+                effective_date TEXT NOT NULL,
+                create_requirements_json TEXT NOT NULL,
+                execution_requirements_json TEXT NOT NULL,
+                required_change_status TEXT NOT NULL,
+                maintenance_window_required TEXT NOT NULL,
+                approval_authority TEXT NOT NULL,
+                approval_via_mcp_available INTEGER NOT NULL,
+                important TEXT NOT NULL
+            );
+
             CREATE TABLE IF NOT EXISTS audit (
                 event_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp TEXT NOT NULL,
@@ -180,6 +197,53 @@ def init_db(force: bool = False) -> None:
                 "Synthetic Telvora Ops state initialized",
             )
 
+        if conn.execute("SELECT COUNT(*) FROM policies").fetchone()[0] == 0:
+            conn.execute(
+                """
+                INSERT INTO policies (
+                    policy_id,
+                    service,
+                    environment,
+                    action,
+                    version,
+                    status,
+                    effective_date,
+                    create_requirements_json,
+                    execution_requirements_json,
+                    required_change_status,
+                    maintenance_window_required,
+                    approval_authority,
+                    approval_via_mcp_available,
+                    important
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    "POL-CHANGE-017",
+                    "identity-api",
+                    "production",
+                    "restart_service",
+                    "3.2",
+                    "ACTIVE",
+                    "2026-08-15",
+                    json.dumps([
+                        "open incident for the same service",
+                        "non-empty operational reason",
+                    ]),
+                    json.dumps([
+                        "change status = approved",
+                        "change service matches target service",
+                        "change action = restart_service",
+                        "maintenance_window = open",
+                    ]),
+                    "approved",
+                    "open",
+                    "change-management",
+                    0,
+                    "Creating a change request does not approve or execute it.",
+                ),
+            )
+
 
 def row_to_dict(row: sqlite3.Row | None) -> dict | None:
     return dict(row) if row is not None else None
@@ -214,32 +278,39 @@ def get_service_health_data(service: str) -> dict:
 
 
 def get_change_policy_data(service: str, action: str) -> dict:
-    if service not in {"identity-api", "billing-api", "web-portal"}:
-        raise ValueError(f"Unsupported service: {service}")
+    init_db()
 
-    if action != "restart_service":
-        raise ValueError(f"Unsupported action: {action}")
+    with connect() as conn:
+        row = conn.execute(
+            """
+            SELECT *
+            FROM policies
+            WHERE service = ?
+              AND action = ?
+              AND environment = 'production'
+              AND status = 'ACTIVE'
+            ORDER BY effective_date DESC
+            LIMIT 1
+            """,
+            (service, action),
+        ).fetchone()
 
-    return {
-        "service": service,
-        "environment": "production",
-        "action": action,
-        "create_request_requires": [
-            "open incident for the same service",
-            "non-empty operational reason",
-        ],
-        "execution_requires": [
-            "change status = approved",
-            "change service matches target service",
-            "change action = restart_service",
-            "maintenance_window = open",
-        ],
-        "approval_authority": "change-management",
-        "approval_via_mcp_available": False,
-        "important": (
-            "Creating a change request does not approve or execute it."
-        ),
-    }
+    if row is None:
+        raise ValueError(
+            f"No active production policy for {service} / {action}"
+        )
+
+    policy = dict(row)
+    policy["create_request_requires"] = json.loads(
+        policy.pop("create_requirements_json")
+    )
+    policy["execution_requires"] = json.loads(
+        policy.pop("execution_requirements_json")
+    )
+    policy["approval_via_mcp_available"] = bool(
+        policy["approval_via_mcp_available"]
+    )
+    return policy
 
 
 def next_change_id(conn: sqlite3.Connection) -> str:
@@ -367,6 +438,34 @@ def execute_restart_data(change_id: str) -> dict:
                 "change_id": change_id,
             }
 
+        policy = conn.execute(
+            """
+            SELECT *
+            FROM policies
+            WHERE service = ?
+              AND action = ?
+              AND environment = 'production'
+              AND status = 'ACTIVE'
+            ORDER BY effective_date DESC
+            LIMIT 1
+            """,
+            (change["service"], change["action"]),
+        ).fetchone()
+
+        if policy is None:
+            audit(
+                conn,
+                "RESTART_DENIED",
+                change_id,
+                "DENIED",
+                "No active policy for requested action",
+            )
+            return {
+                "allowed": False,
+                "code": "DENIED_NO_ACTIVE_POLICY",
+                "change_id": change_id,
+            }
+
         if change["action"] != "restart_service":
             audit(
                 conn,
@@ -381,7 +480,7 @@ def execute_restart_data(change_id: str) -> dict:
                 "change_id": change_id,
             }
 
-        if change["status"] != "approved":
+        if change["status"] != policy["required_change_status"]:
             audit(
                 conn,
                 "RESTART_DENIED",
@@ -389,7 +488,7 @@ def execute_restart_data(change_id: str) -> dict:
                 "DENIED",
                 (
                     f"Change status is {change['status']}; "
-                    "approved is required"
+                    f"{policy['required_change_status']} is required"
                 ),
             )
             return {
@@ -397,17 +496,20 @@ def execute_restart_data(change_id: str) -> dict:
                 "code": "DENIED_CHANGE_NOT_APPROVED",
                 "change_id": change_id,
                 "change_status": change["status"],
-                "required_status": "approved",
+                "required_status": policy["required_change_status"],
                 "message": "Backend authorization denied execution.",
             }
 
-        if change["maintenance_window"] != "open":
+        if change["maintenance_window"] != policy["maintenance_window_required"]:
             audit(
                 conn,
                 "RESTART_DENIED",
                 change_id,
                 "DENIED",
-                "Maintenance window is closed",
+                (
+                    "Maintenance window does not satisfy policy: "
+                    f"{policy['maintenance_window_required']} required"
+                ),
             )
             return {
                 "allowed": False,
@@ -521,6 +623,22 @@ def snapshot() -> dict:
             """
         ).fetchall()
 
+        policies = conn.execute(
+            """
+            SELECT policy_id, service, environment, action,
+                   version, status, effective_date,
+                   create_requirements_json,
+                   execution_requirements_json,
+                   required_change_status,
+                   maintenance_window_required,
+                   approval_authority,
+                   approval_via_mcp_available,
+                   important
+            FROM policies
+            ORDER BY service, action, effective_date DESC
+            """
+        ).fetchall()
+
         audit_rows = conn.execute(
             """
             SELECT event_id, event_type, subject, outcome, detail
@@ -534,6 +652,21 @@ def snapshot() -> dict:
         "service": dict(service),
         "incident": dict(incident),
         "changes": [dict(row) for row in changes],
+        "policies": [
+            {
+                **dict(row),
+                "create_requirements": json.loads(
+                    row["create_requirements_json"]
+                ),
+                "execution_requirements": json.loads(
+                    row["execution_requirements_json"]
+                ),
+                "approval_via_mcp_available": bool(
+                    row["approval_via_mcp_available"]
+                ),
+            }
+            for row in policies
+        ],
         "audit": [dict(row) for row in audit_rows],
     }
 
