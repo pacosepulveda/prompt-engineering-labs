@@ -104,6 +104,14 @@ status = approved
 maintenance_window = open
 ```
 
+El mismo estado incluye la política activa aplicable al restart de `identity-api`. Puedes inspeccionar todo el escenario —servicio, incidencia, cambios, política y auditoría— con:
+
+```bash
+python labs/m06/server.py --snapshot
+```
+
+La política forma parte del estado de Telvora Ops; Kiro debe consultarla mediante la tool MCP `get_change_policy`, no leyendo directamente la base SQLite.
+
 ---
 
 # 3. Iniciar Kiro y comprobar MCP
