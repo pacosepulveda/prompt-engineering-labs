@@ -1,0 +1,4 @@
+change_id,timestamp,resource_id,actor,summary,status,note
+CHG-4417,2026-09-21T18:20:00,vm-analytics-17,data-platform,"Resized c7i.large -> c7i.4xlarge for month-end analytics benchmark",completed,"Benchmark completed on 2026-09-22; follow-up owner assignment pending."
+CHG-4421,2026-09-22T07:30:00,vm-loadtest-03,performance-team,"Created temporary load-test VM for checkout performance test",completed,"Approved test window ended 2026-09-23 23:59."
+CHG-4418,2026-09-21T09:10:00,vm-orders-12,checkout-platform,"Resized c7i.large -> c7i.xlarge to investigate order latency under peak traffic",completed,"Keep under observation through 2026-09-27."
