@@ -1,0 +1,8 @@
+resource_id,service,resource_type,instance_type,state,environment,owner,expires_on
+vm-analytics-17,compute,vm,c7i.4xlarge,running,dev,,
+vm-loadtest-03,compute,vm,c7i.2xlarge,running,test,performance-team,2026-09-23
+vm-orders-12,compute,vm,c7i.xlarge,running,prod,checkout-platform,
+vm-worker-04,compute,vm,c7i.large,running,prod,platform-ops,
+s3-analytics,storage,bucket,,active,prod,data-platform,
+db-orders,database,database,,running,prod,checkout-platform,
+shared-egress,network,network,,active,shared,network-platform,
