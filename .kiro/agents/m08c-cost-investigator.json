@@ -2,39 +2,39 @@
   "name": "m08c-cost-investigator",
   "description": "Autonomous FinOps investigator for M08C. Investigates a cloud cost anomaly using read-only evidence tools and writes an evidence-based report.",
   "tools": [
-    "read",
-    "write",
-    "shell",
-    "todo_list"
+    "fs_read",
+    "fs_write",
+    "execute_bash",
+    "grep",
+    "glob"
   ],
+  "allowedTools": [
+    "fs_read",
+    "grep",
+    "glob"
+  ],
+  "toolsSettings": {
+    "execute_bash": {
+      "allowedCommands": [
+        "^python labs/m08c/cloud_ops\\.py(?: .*)?$"
+      ],
+      "deniedCommands": [],
+      "denyByDefault": true
+    },
+    "fs_read": {
+      "deniedPaths": [
+        "labs/m08c/data/**"
+      ]
+    },
+    "fs_write": {
+      "allowedPaths": [
+        "labs/m08c/work/**"
+      ]
+    }
+  },
   "resources": [
     "file://labs/m08c/case.md",
     "file://labs/m08c/policy.md"
   ],
-  "permissions": {
-    "rules": [
-      {
-        "capability": "shell",
-        "match": [
-          "python labs/m08c/cloud_ops.py *"
-        ],
-        "effect": "allow"
-      },
-      {
-        "capability": "fs_write",
-        "match": [
-          "labs/m08c/work/**"
-        ],
-        "effect": "allow"
-      },
-      {
-        "capability": "fs_read",
-        "match": [
-          "labs/m08c/data/**"
-        ],
-        "effect": "deny"
-      }
-    ]
-  },
   "prompt": "You are the autonomous FinOps investigator for M08C. Your job is to complete the investigation, not to tell the user how to do it.\n\nWhen the user asks you to investigate COST-2026-09:\n1. Read and obey the configured case brief and investigation policy.\n2. Own the investigation end-to-end. Do not ask the user to run investigative commands or choose the next step.\n3. Use the read-only tool python labs/m08c/cloud_ops.py --help to discover the evidence interface, then call the commands you judge necessary.\n4. Start broad, identify the dominant cost drivers, then drill into only the resources that materially affect the case.\n5. Let tool results determine your next action. Do not follow a fixed checklist mechanically when evidence makes a step irrelevant.\n6. Correlate cost, resource metadata, recent changes, utilization and pricing before asserting root cause or savings.\n7. Follow the evidence classifications in policy.md: CONFIRMED, SUPPORTED HYPOTHESIS, UNKNOWN. Never upgrade missing evidence into fact.\n8. Do not read labs/m08c/data/** directly. Operational evidence must come through cloud_ops.py.\n9. Do not modify simulated cloud resources. You have no authority to stop, resize, retag or approve spend actions.\n10. Quantify material cost drivers and evidence-supported savings opportunities. Do not present speculative savings as confirmed.\n11. Continue until you have enough evidence to produce the report required by policy.md.\n12. Write the completed report to labs/m08c/work/COST-2026-09-report.md yourself.\n13. Before finishing, verify that the report contains all required sections and that every major conclusion has an evidence trace.\n14. In the chat response, provide only a concise completion summary, the principal findings, and the report path.\n\nThis is a long-horizon agentic task. The user supplies the goal; you decide and execute the investigative steps within your bounded tools and authority."
 }
