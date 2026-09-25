@@ -1,0 +1,5 @@
+resource_id,observation_days,avg_cpu_pct,p95_cpu_pct,last_activity
+vm-analytics-17,7,7.2,18.4,2026-09-25T02:10:00
+vm-loadtest-03,7,0.8,3.2,2026-09-23T18:05:00
+vm-orders-12,7,38.4,72.1,2026-09-25T04:45:00
+vm-worker-04,7,42.0,68.9,2026-09-25T04:52:00
