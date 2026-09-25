@@ -1,0 +1,8 @@
+service,resource_id,previous_week_eur,current_week_eur
+compute,vm-analytics-17,168.00,672.00
+compute,vm-loadtest-03,0.00,504.00
+compute,vm-orders-12,168.00,336.00
+compute,vm-worker-04,168.00,168.00
+storage,s3-analytics,240.00,310.00
+database,db-orders,780.00,842.00
+network,shared-egress,316.50,344.80
